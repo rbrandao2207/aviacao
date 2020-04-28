@@ -1,0 +1,3 @@
+FROM gcr.io/sainf-abear/dcmodels-base
+
+ENTRYPOINT ["/app/main"]

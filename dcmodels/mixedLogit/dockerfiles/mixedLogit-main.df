@@ -1,0 +1,3 @@
+FROM gcr.io/mycloud/mixedLogit-base
+
+ENTRYPOINT ["/app/main"]

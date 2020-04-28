@@ -1,0 +1,8 @@
+*.swp
+*.o
+csvimport/src/main
+atpi/src/main
+atpi/results/
+blp/src/main
+blp/results/
+anac/

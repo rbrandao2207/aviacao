@@ -1,0 +1,3 @@
+FROM sainfibre/atpi-base
+
+ENTRYPOINT ["/app/main"]

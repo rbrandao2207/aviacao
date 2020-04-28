@@ -1,0 +1,3 @@
+FROM gcr.io/sainf-abear/gentbls-base
+
+ENTRYPOINT ["/app/main"]
