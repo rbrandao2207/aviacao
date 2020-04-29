@@ -46,10 +46,16 @@ void BLP::calc_shares()
     for (unsigned i = 0; i < s_aux1.size(); ++i) {
         //DEBUG
         if (i == 4807)
-            std::cout << X(i,0) << '\t' << X(i,1) << '\t' << X(i,2) << '\t'  << X(i,3) << '\t'  << X(i,4) << '\t'  << X(i,5) << '\t'  << qsi1[i] << std::endl;
+            std::cout << X(i,0) << '\t' << X(i,1) << '\t' << X(i,2) << '\t' << \
+                    X(i,3) << '\t'  << X(i,4) << '\t'  << X(i,5) << '\t'  << \
+                    qsi1[i] << std::endl;
         //ENDDEBUG
-        s_aux1[i] = std::exp((X(i, 0) * beta1_0 + X(i, 1) * beta1_1 + X(i, 2) * beta1_2 + X(i, 3) * beta1_3 + X(i, 4) * beta1_4 + X(i, 5) * beta1_5 + qsi1[i]) / lambda);
-        s_aux2[i] = std::exp((X(i, 0) * beta2_0 + X(i, 1) * beta2_1 + X(i, 2) * beta2_2 + X(i, 3) * beta2_3 + X(i, 4) * beta2_4 + X(i, 5) * beta2_5 + qsi1[i]) / lambda);
+        s_aux1[i] = std::exp((X(i, 0) * beta1_0 + X(i, 1) * beta1_1 + X(i, 2) \
+                * beta1_2 + X(i, 3) * beta1_3 + X(i, 4) * beta1_4 + X(i, 5) * \
+                beta1_5 + qsi1[i]) / lambda);
+        s_aux2[i] = std::exp((X(i, 0) * beta2_0 + X(i, 1) * beta2_1 + X(i, 2) \
+                * beta2_2 + X(i, 3) * beta2_3 + X(i, 4) * beta2_4 + X(i, 5) * \
+                beta2_5 + qsi1[i]) / lambda);
     }
 
     //calc D1 and D2
@@ -81,7 +87,10 @@ void BLP::calc_shares()
 
     // calc model shares
     for (unsigned i = 0; i < s_calc.size(); ++i) {
-        s_calc[i] = gamma * ((s_aux1[i] / D1[i]) * (std::pow(D1[i], lambda) / (1 + std::pow(D1[i], lambda)))) + (1 - gamma) * ((s_aux2[i] / D2[i]) * (std::pow(D2[i], lambda) / (1 + std::pow(D2[i], lambda))));
+        s_calc[i] = gamma * ((s_aux1[i] / D1[i]) * (std::pow(D1[i], lambda) / \
+                (1 + std::pow(D1[i], lambda)))) + (1 - gamma) * ((s_aux2[i] / \
+                D2[i]) * (std::pow(D2[i], lambda) / (1 + std::pow(D2[i], \
+                lambda))));
         //DEBUG
         if (std::isnan(s_calc[i]))
             std::cout << "nan" << std::endl;
@@ -94,7 +103,8 @@ void BLP::contraction(const double contract_tol)
     // initialization
     // observe s_obs = s_obs_wg * mu, where s_obs_wg is within group share
     for (unsigned i = 0; i < s_obs_wg.size(); ++i) {
-        ln_s_obs[i] = std::max(std::log(s_obs_wg[i] * mu), std::numeric_limits<double>::lowest());
+        ln_s_obs[i] = std::max(std::log(s_obs_wg[i] * mu), std::numeric_limits\
+                <double>::lowest());
     }
     this->BLP::calc_shares();
 
@@ -105,7 +115,8 @@ void BLP::contraction(const double contract_tol)
             if (ln_s_obs[i] == std::numeric_limits<double>::lowest()) {
                 qsi1[i] = std::numeric_limits<double>::lowest();
             } else {
-                qsi1[i] = qsi0[i] + lambda * (ln_s_obs[i] - std::log(s_calc[i]));
+                qsi1[i] = qsi0[i] + lambda * (ln_s_obs[i] - std::log(s_calc\
+                        [i]));
             }
             //DEBUG
             if (i == 4807)

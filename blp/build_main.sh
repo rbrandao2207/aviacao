@@ -1,2 +1,2 @@
 #!/bin/sh
-docker build -t sainfibre/blp-main -f dockerfiles/main.df .
+docker build -t rbrandao2207/blp-main -f dockerfiles/main.df .

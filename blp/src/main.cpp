@@ -24,7 +24,6 @@ int main(int argc, char* argv[])
 {
     auto chrono_start = std::chrono::steady_clock::now();
 
-
     /* PARAMETERS */
 
     // price bins
@@ -45,11 +44,11 @@ int main(int argc, char* argv[])
     // estimation params
     // initial guess ((alpha, beta)_r, gamma, lambda, mu)
     // BLP contraction tolerance
-    std::vector<double> init_guess = {.1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .5, .8, .01};
+    std::vector<double> init_guess = {.1, .1, .1, .1, .1, .1, .1, .1, .1, .1, \
+            .1, .1, .5, .8, .01};
     double contract_tol = .01;
 
     /* END OF PARAMETERS */
-
 
     if (argc > 1 && std::strcmp(argv[1], "genarrays") == 0) {
         GenArrays inst_GA(dates, bins, pop_thres);
@@ -63,7 +62,9 @@ int main(int argc, char* argv[])
             oa << inst_GA;
         }
 
-    } else if ((argc > 1 && std::strcmp(argv[1], "estimation") == 0) || (argc > 2 && std::strcmp(argv[1], "genarrays") == 0 && std::strcmp(argv[2], "estimation") == 0)) {
+    } else if ((argc > 1 && std::strcmp(argv[1], "estimation") == 0) || \
+                (argc > 2 && std::strcmp(argv[1], "genarrays") == 0 && \
+                std::strcmp(argv[2], "estimation") == 0)) {
         BLP inst_BLP(init_guess);
         // deserialize
         {
@@ -87,9 +88,13 @@ int main(int argc, char* argv[])
     std::remove(time_fpersist.c_str());
     std::ofstream fdesc_time;
     fdesc_time.open(time_fpersist);
-    fdesc_time << "Last run duration: " << std::chrono::duration_cast<std::chrono::minutes> (time_diff).count() << " mins" << std::endl;
+    fdesc_time << "Last run duration: " << \
+            std::chrono::duration_cast<std::chrono::minutes> \
+            (time_diff).count() << " mins" << std::endl;
     fdesc_time.close();
-    std::cout << "Elapsed time: " << std::chrono::duration_cast<std::chrono::minutes> (time_diff).count() << " mins" << std::endl;
+    std::cout << "Elapsed time: " << \
+            std::chrono::duration_cast<std::chrono::minutes> \
+            (time_diff).count() << " mins" << std::endl;
 
     return 0;
 }

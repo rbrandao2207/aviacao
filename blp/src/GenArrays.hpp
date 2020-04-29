@@ -14,7 +14,8 @@
 class GenArrays
 {
 public:
-    GenArrays(const std::vector<std::string> dates_, const std::valarray<double> bins_, const double pop_thres);
+    GenArrays(const std::vector<std::string> dates_, const std::valarray\
+            <double> bins_, const double pop_thres);
     ~GenArrays()
     {
         s_obs_wg.clear();
@@ -40,7 +41,8 @@ private:
                                  4 double tarifa_upper (bin)
                                  5 unsigned empresa_nbr
                                  6 unsigned period_nbr */
-    std::vector<std::tuple<std::string, std::string, std::string, double, double, unsigned, unsigned>> products;
+    std::vector<std::tuple<std::string, std::string, std::string, double, \
+            double, unsigned, unsigned>> products;
     boost::numeric::ublas::vector<double> s_obs_wg;
     boost::numeric::ublas::vector<double> mkt_id;
     boost::numeric::ublas::vector<double> pop_ave;
