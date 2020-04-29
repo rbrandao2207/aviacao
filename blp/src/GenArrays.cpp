@@ -14,8 +14,8 @@
 GenArrays::GenArrays(const std::vector<std::string> dates_, \
             const std::valarray<double> bins_, const double pop_thres)
 {
-    pqxx::connection C("dbname = aviacao user = postgres password = passwd \
-            hostaddr = 127.0.0.1 port = 5432");
+    pqxx::connection C("dbname = aviacao user = postgres password = passwd"\
+            "hostaddr = 127.0.0.1 port = 5432");
     if (C.is_open()) {
         std::cout << "Opened database successfully: " << C.dbname() << \
             std::endl;

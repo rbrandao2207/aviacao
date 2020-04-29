@@ -12,9 +12,11 @@ using std::vector;
 int main(int argc, char* argv[])
 {
     try {
-        pqxx::connection C("dbname = aviacao user = postgres password = passwd hostaddr = 127.0.0.1 port = 5432");
+        pqxx::connection C("dbname = aviacao user = postgres password = passwd"\
+               "hostaddr = 127.0.0.1 port = 5432");
         if (C.is_open()) {
-            std::cout << "Opened database successfully: " << C.dbname() << std::endl;
+            std::cout << "Opened database successfully: " << C.dbname() << \
+                    std::endl;
         } else {
             std::cout << "Can't open database" << std::endl;
             return 1;
@@ -23,12 +25,15 @@ int main(int argc, char* argv[])
         // csv import from ANAC
         if (argc > 1 && std::strcmp(argv[1], "anac") == 0) {
             pqxx::work W0(C);
-            vector<string> anos = {"2002", "2003", "2004", "2005", "2006", "2007", "2008", "2009", "2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018", "2019"};
-            vector<string> meses = {"01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"};
+            vector<string> anos = {"2002", "2003", "2004", "2005", "2006", \
+                    "2007", "2008", "2009", "2010", "2011", "2012", "2013", \
+                    "2014", "2015", "2016", "2017", "2018", "2019", "2020"};
+            vector<string> meses = {"01", "02", "03", "04", "05", "06", "07", \
+                    "08", "09", "10", "11", "12"};
             string datadir = "/var/lib/postgresql/data/pgdata/databases/anac/";
             for (string ano : anos) {
                 for (string mes : meses) {
-                    if (ano == "2019" && mes == "12")
+                    if (ano == "2020" && !(mes == "01" || mes == "02")
                         continue;
                     csvimport_anac(W0, datadir, ano, mes);
                 }
