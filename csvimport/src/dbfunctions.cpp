@@ -22,7 +22,7 @@ void csvimport_anac(pqxx::work& W, string datadir, string year, string month)
 
     W.exec(sql_createtbl);
 
-    string sql_copy = "COPY " + table + " FROM '" + datadir + year + month + ".CSV' delimiter ';' csv header;";
+    string sql_copy = "COPY " + table + " FROM '" + datadir + year + month + ".csv' DELIMITER ';' CSV HEADER;";
     W.exec(sql_copy);
     string drop_columns = "ALTER TABLE " + table + " DROP COLUMN ano, DROP COLUMN mes;";
     W.exec(drop_columns);

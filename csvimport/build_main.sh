@@ -1,2 +1,2 @@
 #!/bin/sh
-docker build -t sainfibre/gentbls-main -f dockerfiles/gentbls-main.df .
+docker build -t rbrandao2207/gentbls-main -f dockerfiles/gentbls-main.df .
