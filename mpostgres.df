@@ -1,3 +1,0 @@
-FROM postgres
-
-RUN echo "set editing-mode vi" > ~/.inputrc

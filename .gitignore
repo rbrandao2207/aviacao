@@ -1,8 +1,8 @@
-*.swp
 *.o
-csvimport/src/main
+*~
+csvimport/main
 atpi/src/main
 atpi/results/
-blp/src/main
+blp/main
 blp/results/
 dados/

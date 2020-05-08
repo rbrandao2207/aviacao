@@ -15,7 +15,7 @@ GenArrays::GenArrays(const std::vector<std::string> dates_, \
             const std::valarray<double> bins_, const double pop_thres)
 {
     pqxx::connection C("dbname = aviacao user = postgres password = passwd"\
-            "hostaddr = 127.0.0.1 port = 5432");
+            " hostaddr = 127.0.0.1 port = 5432");
     if (C.is_open()) {
         std::cout << "Opened database successfully: " << C.dbname() << \
             std::endl;
@@ -88,8 +88,8 @@ void GenArrays::gen_arrays()
     X.resize(products.size(), 6);
 
     // connect to database
-    pqxx::connection C("dbname = aviacao user = postgres password = passwd "\
-            "hostaddr = 127.0.0.1 port = 5432");
+    pqxx::connection C("dbname = aviacao user = postgres password = passwd"\
+            " hostaddr = 127.0.0.1 port = 5432");
     if (C.is_open()) {
         std::cout << "Opened database successfully: " << C.dbname() << \
                 std::endl;
@@ -116,7 +116,7 @@ void GenArrays::gen_arrays()
                         " WHERE origem = '" + std::get<0>(products[i]) + \
                         "' AND destino = '" + std::get<1>(products[i]) + \
                         "' AND empresa = '" + std::get<2>(products[i]) + \
-                        "' AND tarifa > " + std::to_string(std::get<3>(products\
+                        "' AND tarifa >= " + std::to_string(std::get<3>(products\
                         [i])) + " AND tarifa < " + std::to_string(std::get<4>\
                         (products[i])) + ";";
                 pqxx::result R(N.exec(query));

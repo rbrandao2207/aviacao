@@ -1,8 +1,0 @@
-FROM rbrandao2207/mcpp_boost
-
-ENV APPROOT="/app"
-WORKDIR $APPROOT
-RUN echo "set editing-mode vi" > ~/.inputrc
-
-ONBUILD COPY ["src/", "${APPROOT}"]
-ONBUILD RUN ["make"]

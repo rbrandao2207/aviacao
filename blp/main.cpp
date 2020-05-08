@@ -30,15 +30,15 @@ int main(int argc, char* argv[])
     std::valarray<double> bins = {0, 200, 400, 600, 800, 1000, 1e5};
 
     // population threshold
-    unsigned  pop_thres = 1000000;
+    unsigned pop_thres = 1000000;
 
-    // estimation periods - enter all pediods in tuple
-    //std::vector<std::string> dates = {"201801", "201802", "201803"};
-    std::vector<std::string> dates = {"201801"};
-    std::string run_id = "03";
+    // estimation periods - enter all periods in tuple
+    std::vector<std::string> dates = {"201801", "201802", "201803"};
+    //std::vector<std::string> dates = {"201801"};
+    std::string run_id = "01";
 
     // results directory
-    std::string results_dir = "/app/results/";
+    std::string results_dir = "results/";
     std::string persist_file = results_dir + "arrays/" + run_id;
 
     // estimation params

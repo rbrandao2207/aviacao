@@ -1,3 +1,0 @@
-FROM rbrandao2207/gentbls-base
-
-ENTRYPOINT ["/app/main"]
