@@ -10,4 +10,6 @@ void csvimport_mktsinfo(pqxx::work& W, std::string datafile);
 
 void csvimport_ipca(pqxx::work& W, std::string datafile);
 
+void csvimport_instruments(pqxx::work& W, std::string datafile1);
+
 #endif

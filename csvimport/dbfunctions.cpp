@@ -67,3 +67,19 @@ void csvimport_ipca(pqxx::work& W, std::string datafile)
     W.exec(sql_copy);
     std::cout << "Arquivo csv carregado com sucesso: ipca" << std::endl;
 }
+
+void csvimport_instruments(pqxx::work& W, std::string datafile1)
+{
+    string table = "instruments";
+    string sql_createtbl = "DROP TABLE IF EXISTS " + table + ";"
+        "CREATE TABLE " + table + " ("
+        "date                 text,"
+        "querosene            real"
+        ");";
+
+    W.exec(sql_createtbl);
+
+    string sql_copy1 = "COPY " + table + " FROM '" + datafile1 + "' delimiter ';';";
+    W.exec(sql_copy1);
+    std::cout << "Tabela carregada com sucesso: instruments" << std::endl;
+}

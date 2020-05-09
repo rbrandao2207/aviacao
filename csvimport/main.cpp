@@ -59,6 +59,14 @@ int main(int argc, char* argv[])
             W2.commit();
         }
 
+        // csv import instruments
+        if (argc > 1 && std::strcmp(argv[1], "instruments") == 0) {
+            pqxx::work W3(C);
+            string datafile1 = "/var/lib/postgresql/data/pgdata/databases/instruments/indiceQueroseneAviacao.csv";
+            csvimport_instruments(W3, datafile1);
+            W3.commit();
+        }
+
         std::cout << "Database operation successfull" << std::endl;
     } catch (const std::exception &e) {
         std::cerr << e.what() << std::endl;

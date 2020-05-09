@@ -44,12 +44,12 @@ void BLP::calc_shares()
 {
     //calc s_ind1 & s_ind2 (exp(Xbeta....))
     for (unsigned i = 0; i < s_aux1.size(); ++i) {
-        //DEBUG
+        /*DEBUG
         if (i == 4807)
             std::cout << X(i,0) << '\t' << X(i,1) << '\t' << X(i,2) << '\t' << \
                     X(i,3) << '\t'  << X(i,4) << '\t'  << X(i,5) << '\t'  << \
                     qsi1[i] << std::endl;
-        //ENDDEBUG
+        //ENDDEBUG*/
         s_aux1[i] = std::exp((X(i, 0) * beta1_0 + X(i, 1) * beta1_1 + X(i, 2) \
                 * beta1_2 + X(i, 3) * beta1_3 + X(i, 4) * beta1_4 + X(i, 5) * \
                 beta1_5 + qsi1[i]) / lambda);
@@ -91,10 +91,10 @@ void BLP::calc_shares()
                 (1 + std::pow(D1[i], lambda)))) + (1 - gamma) * ((s_aux2[i] / \
                 D2[i]) * (std::pow(D2[i], lambda) / (1 + std::pow(D2[i], \
                 lambda))));
-        //DEBUG
+        /*DEBUG
         if (std::isnan(s_calc[i]))
             std::cout << "nan" << std::endl;
-        //ENDDEBUG
+        //ENDDEBUG*/
     }
 }
 
@@ -118,10 +118,10 @@ void BLP::contraction(const double contract_tol)
                 qsi1[i] = qsi0[i] + lambda * (ln_s_obs[i] - std::log(s_calc\
                         [i]));
             }
-            //DEBUG
+            /*DEBUG
             if (i == 4807)
                 s_calc_d = std::log(s_calc[i]);
-            //ENDDEBUG
+            //ENDDEBUG*/
         }
 
         // check for convergence
@@ -132,6 +132,7 @@ void BLP::contraction(const double contract_tol)
             }
             if (std::abs(qsi1[i] - qsi0[i]) < contract_tol) {
                 continue;
+		
             } else {
                 break;
             }

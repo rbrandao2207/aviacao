@@ -168,3 +168,31 @@ void GenArrays::gen_arrays()
         }
     }
 }
+
+void GenArrays::gen_instruments()
+{
+    // allocate memory
+    instruments.resize(products.size());
+
+    // connect to database
+    pqxx::connection C("dbname = aviacao user = postgres password = passwd"\
+            " hostaddr = 127.0.0.1 port = 5432");
+    if (C.is_open()) {
+        std::cout << "Opened database successfully: " << C.dbname() << \
+                std::endl;
+    } else {
+        std::cout << "Can't open database" << std::endl;
+        throw std::runtime_error("aborting");
+    }
+    
+    pqxx::nontransaction N(C);
+    unsigned i = 0;    
+    while (i < products.size()) {
+        std::string query = "SELECT querosene FROM instruments WHERE date = "\
+	        + dates[std::get<6>(products[i])] + ";";
+        pqxx::result R(N.exec(query));
+	auto c = R.begin();
+	instruments[i] = c[0].as<double>();
+        ++i;    
+    }    
+}

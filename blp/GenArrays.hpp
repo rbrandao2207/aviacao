@@ -30,8 +30,10 @@ public:
         ar & mkt_id;
         ar & pop_ave;
         ar & X;
+        ar & instruments;
     }
     void gen_arrays();
+    void gen_instruments();
 private:
     std::vector<std::string> dates;
     /* products table structure: 0 string origem
@@ -54,6 +56,7 @@ private:
                            5 time dummy
     */
     boost::numeric::ublas::matrix<double> X;
+    boost::numeric::ublas::vector<double> instruments;
 };
 
 #endif

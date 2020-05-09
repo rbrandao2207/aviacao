@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
     std::valarray<double> bins = {0, 200, 400, 600, 800, 1000, 1e5};
 
     // population threshold
-    unsigned pop_thres = 1000000;
+    unsigned pop_thres = 10000000;
 
     // estimation periods - enter all periods in tuple
     std::vector<std::string> dates = {"201801", "201802", "201803"};
@@ -53,6 +53,7 @@ int main(int argc, char* argv[])
     if (argc > 1 && std::strcmp(argv[1], "genarrays") == 0) {
         GenArrays inst_GA(dates, bins, pop_thres);
         inst_GA.gen_arrays();
+        inst_GA.gen_instruments();	
         // serialize
         {
             std::remove(persist_file.c_str());
