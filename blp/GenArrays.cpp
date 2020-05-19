@@ -78,6 +78,34 @@ GenArrays::GenArrays(const std::vector<std::string> dates_, \
             "loaded" << std::endl;
 }
 
+void GenArrays::gen_instruments()
+{
+    // allocate memory
+    instruments.resize(products.size());
+
+    // connect to database
+    pqxx::connection C("dbname = aviacao user = postgres password = passwd"\
+            " hostaddr = 127.0.0.1 port = 5432");
+    if (C.is_open()) {
+        std::cout << "Opened database successfully: " << C.dbname() << \
+                std::endl;
+    } else {
+        std::cout << "Can't open database" << std::endl;
+        throw std::runtime_error("aborting");
+    }
+    
+    pqxx::nontransaction N(C);
+    unsigned i = 0;    
+    while (i < products.size()) {
+        std::string query = "SELECT querosene FROM instruments WHERE date = "\
+	        + dates[std::get<6>(products[i])] + ";";
+        pqxx::result R(N.exec(query));
+	auto c = R.begin();
+	instruments[i] = c[0].as<double>();
+        ++i;    
+    }    
+}
+
 void GenArrays::gen_arrays()
 {
     // allocate memory and initialize
@@ -86,6 +114,8 @@ void GenArrays::gen_arrays()
     std::fill(s_obs_wg.data().begin(), s_obs_wg.data().end(), 0.0);
     pop_ave.resize(products.size());
     X.resize(products.size(), 6);
+    // Z matrix w/ 1 instrument, just-identified
+    Z.resize(products.size(), 6);
 
     // connect to database
     pqxx::connection C("dbname = aviacao user = postgres password = passwd"\
@@ -134,14 +164,20 @@ void GenArrays::gen_arrays()
                 // fill pop_ave
                 pop_ave[i] = c2[0].as<double>();
 
-                // fill X
+                // fill X and Z
                 X(i, 0) = 1.;
+		Z(i, 0) = 1.;
                 X(i, 1) = ((std::get<3>(products[i]) + std::get<4>(products\
                         [i])) / 2.) /1000;
+		Z(i, 1) = instruments[i];
                 X(i, 2) = c2[1].as<double>() / 1000;
+                Z(i, 2) = c2[1].as<double>() / 1000;		
                 X(i, 3) = pow(c2[1].as<double>() / 1000, 2);
+		Z(i, 3) = pow(c2[1].as<double>() / 1000, 2);
                 X(i, 4) = std::get<5>(products[i]);
+		Z(i, 4) = std::get<5>(products[i]);
                 X(i, 5) = std::get<6>(products[i]);
+		Z(i, 5) = std::get<6>(products[i]);
 
                 ++i;
             } else {
@@ -167,32 +203,4 @@ void GenArrays::gen_arrays()
             }
         }
     }
-}
-
-void GenArrays::gen_instruments()
-{
-    // allocate memory
-    instruments.resize(products.size());
-
-    // connect to database
-    pqxx::connection C("dbname = aviacao user = postgres password = passwd"\
-            " hostaddr = 127.0.0.1 port = 5432");
-    if (C.is_open()) {
-        std::cout << "Opened database successfully: " << C.dbname() << \
-                std::endl;
-    } else {
-        std::cout << "Can't open database" << std::endl;
-        throw std::runtime_error("aborting");
-    }
-    
-    pqxx::nontransaction N(C);
-    unsigned i = 0;    
-    while (i < products.size()) {
-        std::string query = "SELECT querosene FROM instruments WHERE date = "\
-	        + dates[std::get<6>(products[i])] + ";";
-        pqxx::result R(N.exec(query));
-	auto c = R.begin();
-	instruments[i] = c[0].as<double>();
-        ++i;    
-    }    
 }

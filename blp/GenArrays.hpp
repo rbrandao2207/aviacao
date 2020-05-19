@@ -22,6 +22,7 @@ public:
         mkt_id.clear();
         pop_ave.clear();
         X.clear();
+	Z.clear();
     }
     template<class Archive>
     void serialize(Archive & ar, const unsigned int version)
@@ -30,7 +31,7 @@ public:
         ar & mkt_id;
         ar & pop_ave;
         ar & X;
-        ar & instruments;
+        ar & Z;
     }
     void gen_arrays();
     void gen_instruments();
@@ -57,6 +58,15 @@ private:
     */
     boost::numeric::ublas::matrix<double> X;
     boost::numeric::ublas::vector<double> instruments;
+    /* Z matrix structure: 0 constant
+                           1 aviation fuel price (instrument, querosene)
+                           2 distance
+                           3 distance^2
+                           4 carrier dummy
+                           5 time dummy
+    */
+    boost::numeric::ublas::matrix<double> Z;
+  
 };
 
 #endif
