@@ -5,9 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <string>
-#include <valarray>
 #include <vector>
-
 #include <boost/archive/text_oarchive.hpp>
 
 #include "BLP.hpp"
@@ -26,25 +24,27 @@ int main(int argc, char* argv[])
 
   /* PARAMETERS */
 
-  // price bins
-  const std::valarray<double> bins = {0, 200, 400, 600, 800, 1000, 1e5};
-
-  // population threshold
-  const unsigned pop_thres = 10000000
-
   // estimation periods - enter all periods in tuple
   const std::vector<std::string> dates = {"201801", "201802", "201803"};
-  const std::string run_id = "01";
+  const std::string run_id = "02";
+
+  // price bins
+  const std::vector<double> bins = {0, 200, 400, 600, 800, 1000, 1e5};
+
+  // population threshold
+  const unsigned pop_thres = 10000000;
 
   // results directory
   const std::string results_dir = "results/";
   const std::string persist_file = results_dir + "arrays/" + run_id;
 
-  // estimation params
+  // estimation params:
   // initial guess ((alpha, beta)_r, gamma, lambda, mu)
+  // initial tetrahedron "size" for Nelder Mead procedure
   // BLP contraction tolerance
   const std::vector<double> init_guess = {.1, .1, .1, .1, .1, .1, .1, .1, .1, \
 					  .1, .1, .1, .5, .8, .01};
+  const double init_tetra_size = {.1};
   const double contract_tol = .01;
 
   /* END OF PARAMETERS */
@@ -65,7 +65,7 @@ int main(int argc, char* argv[])
   } else if ((argc > 1 && std::strcmp(argv[1], "estimation") == 0) || \
 	     (argc > 2 && std::strcmp(argv[1], "genarrays") == 0 && \
 	      std::strcmp(argv[2], "estimation") == 0)) {
-    BLP inst_BLP(init_guess);
+    BLP inst_BLP(init_guess, init_tetra_size);
     // deserialize
     {
         std::ifstream ifs(persist_file);
