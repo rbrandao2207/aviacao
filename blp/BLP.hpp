@@ -25,17 +25,15 @@ public:
     ar & X;
     ar & Z;
   }
+  unsigned params_nbr;
   void allocate();
-  void calc_shares();
-  void contraction(const& double contract_tol);
   void calc_objective();
-  void gmm(const& double contract_tol);
+  void NM();
 
 private:
 
   /* Exogenous vars */
 
-  unsigned params_nbr;
   unsigned N;
   ublas::vector<double> s_obs_wg;
   ublas::vector<double> mkt_id;

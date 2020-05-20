@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cmath>
+#include <future>
 #include <limits>
 #include <vector>
 
@@ -49,6 +50,8 @@ void BLP::allocate()
 
 void BLP::gmm(const double& contract_tol)
 {
+  //TODO move all async to main, mantain two member functions with i arg (i -> P[i])
+  //calc_objective and NM
   std::vector<std::future<int>> futures;
   for (unsigned i = 0; i < params_nbr + 1; ++i) {
     futures.push_back(std::async(calc_objective, std::ref(P[i])));
@@ -58,7 +61,53 @@ void BLP::gmm(const double& contract_tol)
 
 void BLP::calc_objective()
 {
+  contraction
   1 / N //continue from here
+}
+
+void BLP::contraction(const double& contract_tol)
+{
+  // initialization
+  // observe s_obs = s_obs_wg * pop_ave * mu, where s_obs_wg is within group share
+  for (unsigned i = 0; i < N; ++i) {
+    ln_s_obs[i] = std::max(std::log(s_obs_wg[i] * pop_ave[i] * mu), \
+			   std::numeric_limits<double>::lowest());
+  }
+  this->BLP::calc_shares();
+
+  bool conv_check = 0;
+  double s_calc_d; //DEBUG
+  while (!conv_check) {
+    for (unsigned i = 0; i < xi1.size(); ++i) {
+      if (ln_s_obs[i] == std::numeric_limits<double>::lowest()) {
+        xi1[i] = std::numeric_limits<double>::lowest();
+      } else {
+        xi1[i] = xi0[i] + lambda * (ln_s_obs[i] - std::log(s_calc[i]));
+      }
+      /*DEBUG
+      if (i == 4807)
+          s_calc_d = std::log(s_calc[i]);
+      //ENDDEBUG*/
+    }
+
+    // check for convergence
+    for (unsigned i = 0; i <= xi1.size(); ++i) {
+      if (i == xi1.size()) {
+        conv_check = 1;
+        break;
+      }
+      if (std::abs(xi1[i] - xi0[i]) < contract_tol) {
+        continue;
+    		
+      } else {
+        break;
+      }
+    }
+
+    // update vars
+    this->BLP::calc_shares();
+    xi0 = xi1;
+  }
 }
 
 void BLP::calc_shares(const double& beta1_0, //TODO fill others)
@@ -116,50 +165,5 @@ void BLP::calc_shares(const double& beta1_0, //TODO fill others)
     if (std::isnan(s_calc[i]))
         std::cout << "nan" << std::endl;
     //ENDDEBUG*/
-  }
-}
-
-void BLP::contraction(const double& contract_tol)
-{
-  // initialization
-  // observe s_obs = s_obs_wg * pop_ave * mu, where s_obs_wg is within group share
-  for (unsigned i = 0; i < N; ++i) {
-    ln_s_obs[i] = std::max(std::log(s_obs_wg[i] * pop_ave[i] * mu), \
-			   std::numeric_limits<double>::lowest());
-  }
-  this->BLP::calc_shares();
-
-  bool conv_check = 0;
-  double s_calc_d; //DEBUG
-  while (!conv_check) {
-    for (unsigned i = 0; i < xi1.size(); ++i) {
-      if (ln_s_obs[i] == std::numeric_limits<double>::lowest()) {
-        xi1[i] = std::numeric_limits<double>::lowest();
-      } else {
-        xi1[i] = xi0[i] + lambda * (ln_s_obs[i] - std::log(s_calc[i]));
-      }
-      /*DEBUG
-      if (i == 4807)
-          s_calc_d = std::log(s_calc[i]);
-      //ENDDEBUG*/
-    }
-
-    // check for convergence
-    for (unsigned i = 0; i <= xi1.size(); ++i) {
-      if (i == xi1.size()) {
-        conv_check = 1;
-        break;
-      }
-      if (std::abs(xi1[i] - xi0[i]) < contract_tol) {
-        continue;
-    		
-      } else {
-        break;
-      }
-    }
-
-    // update vars
-    this->BLP::calc_shares();
-    xi0 = xi1;
   }
 }
