@@ -6,6 +6,7 @@
 #include <iostream>
 #include <string>
 #include <thread>
+#include <valarray>
 #include <vector>
 #include <boost/archive/text_oarchive.hpp>
 
@@ -30,7 +31,7 @@ int main(int argc, char* argv[])
   const std::string run_id = "02";
 
   // price bins
-  const std::vector<double> bins = {0, 200, 400, 600, 800, 1000, 1e5};
+  const std::valarray<double> bins = {0, 200, 400, 600, 800, 1000, 1e5};
 
   // population threshold
   const unsigned pop_thres = 10000000;
@@ -77,12 +78,13 @@ int main(int argc, char* argv[])
     inst_BLP.allocate();
     // GMM estimation
     std::vector<std::thread> threads;
-    while (True) { // TODO NM stop
+    while (true) { // TODO NM stop
       for (unsigned th = 0; th < inst_BLP.params_nbr + 1; ++th) {
         threads.push_back(std::thread(&BLP::calc_objective, contract_tol, th));
       }
       for (auto& thread : threads)
         thread.join();
+      break;
     }
     
   } else {

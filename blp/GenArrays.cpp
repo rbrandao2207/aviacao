@@ -4,6 +4,7 @@
 #include <pqxx/pqxx>
 #include <stdexcept>
 #include <string>
+#include <valarray>
 #include <vector>
 
 #include "GenArrays.hpp"
@@ -11,7 +12,7 @@
 
 // constructor fills products table
 GenArrays::GenArrays(const std::vector<std::string> dates_, \
-            const std::vector<double> bins_, const double pop_thres)
+            const std::valarray<double> bins_, const double pop_thres)
 {
     pqxx::connection C("dbname = aviacao user = postgres password = passwd"\
             " hostaddr = 127.0.0.1 port = 5432");
@@ -29,7 +30,7 @@ GenArrays::GenArrays(const std::vector<std::string> dates_, \
     unsigned counter_dates = 0;
     for (auto& date : dates) {
         // set bin to jan 2020 nominal values
-        std::vector<double> bins = bins_;
+        std::valarray<double> bins = bins_;
         std::string ipca_query = "SELECT index FROM ipca WHERE date = '" + \
                 date + "';";
         pqxx::result R_ipca(N.exec(ipca_query));

@@ -7,13 +7,13 @@
 
 #include "BLP.hpp"
 
-using namespace boost::numeric
+using namespace boost::numeric;
 
 
 BLP::BLP(const std::vector<double> init_guess, const double init_tetra_size)
 {
   params_nbr = init_guess.size();
-  ublas::vector auxP;
+  ublas::vector<double> auxP;
   auxP.resize(params_nbr);
   for (unsigned i = 0; i < params_nbr + 1; ++i) {
     P.push_back(auxP);
@@ -33,7 +33,7 @@ void BLP::allocate()
 {
   /* Initialize N, unobs util, and allocate other ublas objs */
   N = s_obs_wg.size();
-  ublas::vector auxV;
+  ublas::vector<double> auxV;
   for (unsigned i = 0; i < params_nbr + 1; ++i) {
     xi0.push_back(auxV);
     xi0[i].resize(N);
@@ -61,7 +61,7 @@ void BLP::calc_objective(const double contract_tol, unsigned th)
   // initialization
   // observe s_obs = s_obs_wg * pop_ave * mu, where s_obs_wg is within group share
   for (unsigned i = 0; i < N; ++i) {
-    ln_s_obs[th][i] = std::max(std::log(s_obs_wg[i] * pop_ave[i] * mu), \
+    ln_s_obs[th][i] = std::max(std::log(s_obs_wg[i] * pop_ave[i] * P[th][14]), \
 			   std::numeric_limits<double>::lowest());
   }
 

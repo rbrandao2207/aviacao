@@ -2,6 +2,7 @@
 #define GENARRAYSHEADERDEF
 
 #include <string>
+#include <valarray>
 #include <vector>
 
 #include <boost/archive/text_iarchive.hpp>
@@ -13,7 +14,7 @@
 class GenArrays
 {
 public:
-    GenArrays(const std::vector<std::string> dates_, const std::vector\
+    GenArrays(const std::vector<std::string> dates_, const std::valarray\
             <double> bins_, const double pop_thres);
     ~GenArrays()
     {

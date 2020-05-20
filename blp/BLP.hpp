@@ -8,7 +8,7 @@
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/vector.hpp>
 
-using namespace boost::numeric
+using namespace boost::numeric;
 
 
 struct BLP
