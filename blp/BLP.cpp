@@ -3,89 +3,62 @@
 #include <limits>
 #include <vector>
 
+#include <boost/numeric/ublas/vector.hpp>
+
 #include "BLP.hpp"
+
+using namespace boost::numeric
 
 
 BLP::BLP(const std::vector<double> init_guess, const double init_tetra_size)
 {
-  P0.resize(init_guess.size());
-  for (unsigned i = 0; i < init_guess.size(); ++i) {
-    P0[i] = init_guess[i];
+  params_nbr = init_guess.size();
+  ublas::vector auxP;
+  auxP.resize(params_nbr);
+  for (unsigned i = 0; i < params_nbr + 1; ++i) {
+    P.push_back(auxP);
   }
-  P1 = P0; P1[1] += init_tetra_size;
-  P2 = P0; P2[2] += init_tetra_size;
-  P3 = P0; P3[3] += init_tetra_size;
-  P4 = P0; P4[4] += init_tetra_size;
-  P5 = P0; P5[5] += init_tetra_size;
-  P6 = P0; P6[6] += init_tetra_size;
-  P7 = P0; P7[7] += init_tetra_size;
-  P8 = P0; P8[8] += init_tetra_size;
-  P9 = P0; P9[9] += init_tetra_size;
-  P10 = P0; P10[10] += init_tetra_size;
-  P11 = P0; P11[11] += init_tetra_size;
-  P12 = P0; P12[12] += init_tetra_size;
-  P13 = P0; P13[13] += init_tetra_size;
-  P14 = P0; P14[14] += init_tetra_size;
-  P15 = P0; P15[15] += init_tetra_size;
+  for (unsigned i = 0; i < params_nbr + 1; ++i) {
+    for (unsigned j = 0; j < params_nbr; ++j) {
+      if (i == 0 || j != i) {
+	P[i][j] = init_guess[j];
+      } else {
+	P[i][j] = init_guess[j] + init_tetra_size;
+      }	
+    }
+  }
 }
 
 void BLP::allocate()
 {
   /* Initialize N, unobs util, and allocate other ublas objs */
   N = s_obs_wg.size();
-  // xi0
-  P0_xi0.resize(N); P1_xi0.resize(N); P2_xi0.resize(N); P3_xi0.resize(N);
-  P4_xi0.resize(N); P5_xi0.resize(N); P6_xi0.resize(N);	P7_xi0.resize(N);
-  P8_xi0.resize(N); P9_xi0.resize(N); P10_xi0.resize(N); P11_xi0.resize(N);
-  P12_xi0.resize(N); P13_xi0.resize(N); P14_xi0.resize(N); P15_xi0;
-  std::fill(P0_xi0.data().begin(), P0_xi0.data().end(), 0.);
-  std::fill(P1_xi0.data().begin(), P1_xi0.data().end(), 0.);
-  std::fill(P2_xi0.data().begin(), P2_xi0.data().end(), 0.);
-  std::fill(P3_xi0.data().begin(), P3_xi0.data().end(), 0.);
-  std::fill(P4_xi0.data().begin(), P4_xi0.data().end(), 0.);
-  std::fill(P5_xi0.data().begin(), P5_xi0.data().end(), 0.);
-  std::fill(P6_xi0.data().begin(), P6_xi0.data().end(), 0.);
-  std::fill(P7_xi0.data().begin(), P7_xi0.data().end(), 0.);
-  std::fill(P8_xi0.data().begin(), P8_xi0.data().end(), 0.);
-  std::fill(P9_xi0.data().begin(), P9_xi0.data().end(), 0.);
-  std::fill(P10_xi0.data().begin(), P10_xi0.data().end(), 0.);
-  std::fill(P11_xi0.data().begin(), P11_xi0.data().end(), 0.);
-  std::fill(P12_xi0.data().begin(), P12_xi0.data().end(), 0.);
-  std::fill(P13_xi0.data().begin(), P13_xi0.data().end(), 0.);
-  std::fill(P14_xi0.data().begin(), P14_xi0.data().end(), 0.);
-  std::fill(P15_xi0.data().begin(), P15_xi0.data().end(), 0.);
-  // xi1
-  P0_xi1.resize(N); P1_xi1.resize(N); P2_xi1.resize(N); P3_xi1.resize(N);
-  P4_xi1.resize(N); P5_xi1.resize(N); P6_xi1.resize(N);	P7_xi1.resize(N);
-  P8_xi1.resize(N); P9_xi1.resize(N); P10_xi1.resize(N); P11_xi1.resize(N);
-  P12_xi1.resize(N); P13_xi1.resize(N); P14_xi1.resize(N); P15_xi1;
-  std::fill(P0_xi1.data().begin(), P0_xi1.data().end(), 0.);
-  std::fill(P1_xi1.data().begin(), P1_xi1.data().end(), 0.);
-  std::fill(P2_xi1.data().begin(), P2_xi1.data().end(), 0.);
-  std::fill(P3_xi1.data().begin(), P3_xi1.data().end(), 0.);
-  std::fill(P4_xi1.data().begin(), P4_xi1.data().end(), 0.);
-  std::fill(P5_xi1.data().begin(), P5_xi1.data().end(), 0.);
-  std::fill(P6_xi1.data().begin(), P6_xi1.data().end(), 0.);
-  std::fill(P7_xi1.data().begin(), P7_xi1.data().end(), 0.);
-  std::fill(P8_xi1.data().begin(), P8_xi1.data().end(), 0.);
-  std::fill(P9_xi1.data().begin(), P9_xi1.data().end(), 0.);
-  std::fill(P10_xi1.data().begin(), P10_xi1.data().end(), 0.);
-  std::fill(P11_xi1.data().begin(), P11_xi1.data().end(), 0.);
-  std::fill(P12_xi1.data().begin(), P12_xi1.data().end(), 0.);
-  std::fill(P13_xi1.data().begin(), P13_xi1.data().end(), 0.);
-  std::fill(P14_xi1.data().begin(), P14_xi1.data().end(), 0.);
-  std::fill(P15_xi1.data().begin(), P15_xi1.data().end(), 0.);
-  
-  xi0.resize(N);
-  xi1.resize(N);
-  std::fill(xi0.data().begin(), xi0.data().end(), 0.);
-  std::fill(xi1.data().begin(), xi1.data().end(), 0.);
-  s_aux1.resize(N);
-  s_aux2.resize(N);
-  D1.resize(N);
-  D2.resize(N);
-  s_calc.resize(N);
-  ln_s_obs.resize(N);
+  for (unsigned i = 0; i < params_nbr + 1; ++i) {
+    xi0[i].resize(N);
+    std::fill(xi0[i].data().begin(), xi0[i].data().end(), 0.);
+    xi1[i].resize(N);
+    std::fill(xi1[i].data().begin(), xi1[i].data().end(), 0.);
+    s_aux1[i].resize(N);
+    s_aux2[i].resize(N);
+    D1[i].resize(N);
+    D2[i].resize(N);
+    s_calc[i].resize(N);
+    ln_s_obs[i].resize(N);
+  }
+}
+
+void BLP::gmm(const double& contract_tol)
+{
+  std::vector<std::future<int>> futures;
+  for (unsigned i = 0; i < params_nbr + 1; ++i) {
+    futures.push_back(std::async(calc_objective, std::ref(P[i])));
+  }
+		      
+}
+
+void BLP::calc_objective()
+{
+  1 / N //continue from here
 }
 
 void BLP::calc_shares(const double& beta1_0, //TODO fill others)
@@ -189,13 +162,4 @@ void BLP::contraction(const double& contract_tol)
     this->BLP::calc_shares();
     xi0 = xi1;
   }
-}
-
-void BLP::calc_objective()
-{
-  1 / N //continue from here
-}
-
-void BLP::gmm(const double& contract_tol)
-{
 }
