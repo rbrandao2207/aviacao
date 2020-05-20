@@ -1,6 +1,5 @@
 #include <algorithm>
 #include <cmath>
-#include <future>
 #include <limits>
 #include <vector>
 
@@ -34,92 +33,42 @@ void BLP::allocate()
 {
   /* Initialize N, unobs util, and allocate other ublas objs */
   N = s_obs_wg.size();
+  ublas::vector auxV;
   for (unsigned i = 0; i < params_nbr + 1; ++i) {
+    xi0.push_back(auxV);
     xi0[i].resize(N);
     std::fill(xi0[i].data().begin(), xi0[i].data().end(), 0.);
+    xi1.push_back(auxV);
     xi1[i].resize(N);
     std::fill(xi1[i].data().begin(), xi1[i].data().end(), 0.);
+    s_aux1.push_back(auxV);
     s_aux1[i].resize(N);
+    s_aux2.push_back(auxV);
     s_aux2[i].resize(N);
+    D1.push_back(auxV);
     D1[i].resize(N);
+    D2.push_back(auxV);
     D2[i].resize(N);
+    s_calc.push_back(auxV);
     s_calc[i].resize(N);
+    ln_s_obs.push_back(auxV);
     ln_s_obs[i].resize(N);
   }
 }
 
-void BLP::gmm(const double& contract_tol)
-{
-  //TODO move all async to main, mantain two member functions with i arg (i -> P[i])
-  //calc_objective and NM
-  std::vector<std::future<int>> futures;
-  for (unsigned i = 0; i < params_nbr + 1; ++i) {
-    futures.push_back(std::async(calc_objective, std::ref(P[i])));
-  }
-		      
-}
-
-void BLP::calc_objective()
-{
-  contraction
-  1 / N //continue from here
-}
-
-void BLP::contraction(const double& contract_tol)
+void BLP::calc_objective(const double contract_tol, unsigned th)
 {
   // initialization
   // observe s_obs = s_obs_wg * pop_ave * mu, where s_obs_wg is within group share
   for (unsigned i = 0; i < N; ++i) {
-    ln_s_obs[i] = std::max(std::log(s_obs_wg[i] * pop_ave[i] * mu), \
+    ln_s_obs[th][i] = std::max(std::log(s_obs_wg[i] * pop_ave[i] * mu), \
 			   std::numeric_limits<double>::lowest());
   }
-  this->BLP::calc_shares();
 
-  bool conv_check = 0;
-  double s_calc_d; //DEBUG
-  while (!conv_check) {
-    for (unsigned i = 0; i < xi1.size(); ++i) {
-      if (ln_s_obs[i] == std::numeric_limits<double>::lowest()) {
-        xi1[i] = std::numeric_limits<double>::lowest();
-      } else {
-        xi1[i] = xi0[i] + lambda * (ln_s_obs[i] - std::log(s_calc[i]));
-      }
-      /*DEBUG
-      if (i == 4807)
-          s_calc_d = std::log(s_calc[i]);
-      //ENDDEBUG*/
-    }
-
-    // check for convergence
-    for (unsigned i = 0; i <= xi1.size(); ++i) {
-      if (i == xi1.size()) {
-        conv_check = 1;
-        break;
-      }
-      if (std::abs(xi1[i] - xi0[i]) < contract_tol) {
-        continue;
-    		
-      } else {
-        break;
-      }
-    }
-
-    // update vars
-    this->BLP::calc_shares();
-    xi0 = xi1;
-  }
-}
-
-void BLP::calc_shares(const double& beta1_0, //TODO fill others)
-{
+  /* Calc shares */
   //calc s_ind1 & s_ind2 (exp(Xbeta....))
+  /*
   for (unsigned i = 0; i < N; ++i) {
-    /*DEBUG
-    if (i == 4807)
-        std::cout << X(i,0) << '\t' << X(i,1) << '\t' << X(i,2) << '\t' << \
-                X(i,3) << '\t'  << X(i,4) << '\t'  << X(i,5) << '\t'  << \
-                xi1[i] << std::endl;
-    //ENDDEBUG*/
     s_aux1[i] = std::exp((X(i, 0) * beta1_0 + X(i, 1) * beta1_1 + X(i, 2) * \
 			  beta1_2 + X(i, 3) * beta1_3 + X(i, 4) * beta1_4 + \
 			  X(i, 5) * beta1_5 + xi1[i]) / lambda);
@@ -161,9 +110,43 @@ void BLP::calc_shares(const double& beta1_0, //TODO fill others)
                 (1 + std::pow(D1[i], lambda)))) + (1 - gamma) * ((s_aux2[i] / \
                 D2[i]) * (std::pow(D2[i], lambda) / (1 + std::pow(D2[i], \
                 lambda))));
-    /*DEBUG
-    if (std::isnan(s_calc[i]))
-        std::cout << "nan" << std::endl;
-    //ENDDEBUG*/
   }
+  */  
+  /* Berry's Contraction */
+  /*
+  bool conv_check = 0;
+  double s_calc_d; //DEBUG
+  while (!conv_check) {
+    for (unsigned i = 0; i < xi1.size(); ++i) {
+      if (ln_s_obs[i] == std::numeric_limits<double>::lowest()) {
+        xi1[i] = std::numeric_limits<double>::lowest();
+      } else {
+        xi1[i] = xi0[i] + lambda * (ln_s_obs[i] - std::log(s_calc[i]));
+      }
+    }
+
+    // check for convergence
+    for (unsigned i = 0; i <= xi1.size(); ++i) {
+      if (i == xi1.size()) {
+        conv_check = 1;
+        break;
+      }
+      if (std::abs(xi1[i] - xi0[i]) < contract_tol) {
+        continue;
+    		
+      } else {
+        break;
+      }
+    }
+
+    // update vars
+    this->BLP::calc_shares();
+    xi0 = xi1;
+  }
+  */
+  /* Compute objective */
+}
+
+void nelder_mead ()
+{
 }

@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <thread>
 #include <vector>
 #include <boost/archive/text_oarchive.hpp>
 
@@ -76,12 +77,14 @@ int main(int argc, char* argv[])
     inst_BLP.allocate();
     // GMM estimation
     std::vector<std::thread> threads;
-    for (unsigned i = 0; i < inst_BLP.params_nbr + 1; ++i) {
-      threads.push_back(std::thread(&BLP::calc_objective, std::ref(inst_BLP)));//Check
-      //threads.push_back(std::thread(&BLP::calc_objective, &inst_BLP));
+    while (True) { // TODO NM stop
+      for (unsigned th = 0; th < inst_BLP.params_nbr + 1; ++th) {
+        threads.push_back(std::thread(&BLP::calc_objective, contract_tol, th));
+      }
+      for (auto& thread : threads)
+        thread.join();
     }
-	
-    inst_BLP.gmm(contract_tol);
+    
   } else {
     std::cout << "Invalid args!" << std::endl;
     throw std::runtime_error("aborting");
