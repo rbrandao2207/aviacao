@@ -97,8 +97,8 @@ void GenArrays::gen_instruments()
     pqxx::nontransaction N(C);
     unsigned i = 0;    
     while (i < products.size()) {
-        std::string query = "SELECT querosene FROM instruments WHERE date = "\
-	        + dates[std::get<6>(products[i])] + ";";
+        std::string query = "SELECT querosene FROM instruments WHERE date = '"\
+	        + dates[std::get<6>(products[i])] + "';";
         pqxx::result R(N.exec(query));
 	auto c = R.begin();
 	instruments[i] = c[0].as<double>();

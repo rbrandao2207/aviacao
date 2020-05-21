@@ -28,13 +28,13 @@ int main(int argc, char* argv[])
 
   // estimation periods - enter all periods in tuple
   const std::vector<std::string> dates = {"201801", "201802", "201803"};
-  const std::string run_id = "02";
+  const std::string run_id = "01";
 
   // price bins
   const std::valarray<double> bins = {0, 200, 400, 600, 800, 1000, 1e5};
 
   // population threshold
-  const unsigned pop_thres = 10000000;
+  const unsigned pop_thres = 1000000;
 
   // results directory
   const std::string results_dir = "results/";
@@ -80,13 +80,14 @@ int main(int argc, char* argv[])
     std::vector<std::thread> threads;
     while (true) { // TODO NM stop
       for (unsigned th = 0; th < inst_BLP.params_nbr + 1; ++th) {
-        threads.push_back(std::thread(&BLP::calc_objective, contract_tol, th));
+        threads.push_back(std::thread(&BLP::calc_objective, std::ref(inst_BLP), contract_tol, th));
       }
       for (auto& thread : threads)
         thread.join();
       break;
     }
-    
+    inst_BLP.nelder_mead();
+
   } else {
     std::cout << "Invalid args!" << std::endl;
     throw std::runtime_error("aborting");
