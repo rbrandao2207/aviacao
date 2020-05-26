@@ -10,6 +10,7 @@
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/vector.hpp>
 
+namespace ublas = boost::numeric::ublas;
 
 class GenArrays
 {
@@ -46,9 +47,9 @@ private:
                                  6 unsigned period_nbr */
     std::vector<std::tuple<std::string, std::string, std::string, double, \
             double, unsigned, unsigned>> products;
-    boost::numeric::ublas::vector<double> s_obs_wg;
-    boost::numeric::ublas::vector<double> mkt_id;
-    boost::numeric::ublas::vector<double> pop_ave;
+    ublas::vector<double> s_obs_wg;
+    ublas::vector<double> mkt_id;
+    ublas::vector<double> pop_ave;
     /* X matrix structure: 0 constant
                            1 fare (bin center)
                            2 distance
@@ -56,8 +57,8 @@ private:
                            4 carrier dummy
                            5 time dummy
     */
-    boost::numeric::ublas::matrix<double> X;
-    boost::numeric::ublas::vector<double> instruments;
+    ublas::matrix<double> X;
+    ublas::vector<double> instruments;
     /* Z matrix structure: 0 constant
                            1 aviation fuel price (instrument, querosene)
                            2 distance
@@ -65,7 +66,7 @@ private:
                            4 carrier dummy
                            5 time dummy
     */
-    boost::numeric::ublas::matrix<double> Z;
+    ublas::matrix<double> Z;
   
 };
 

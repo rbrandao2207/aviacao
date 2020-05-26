@@ -8,17 +8,18 @@
 
 #include "BLP.hpp"
 
-using namespace boost::numeric::ublas;
+namespace ublas = boost::numeric::ublas;
 
 
 BLP::BLP(const std::vector<double> init_guess, const double init_tetra_size)
 {
 
   params_nbr = init_guess.size();
-  vector<double> auxP;
+  ublas::vector<double> auxP;
   auxP.resize(params_nbr);
   for (unsigned i = 0; i < params_nbr + 1; ++i) {
     P.push_back(auxP);
+    y.push_back(0.); // init y
   }
   // initialize P's, P[0] at center
   for (unsigned i = 0; i < params_nbr + 1; ++i) {
@@ -36,7 +37,7 @@ void BLP::allocate()
 {
   // Initialize N, unobs util, and allocate other ublas objs
   N = s_obs_wg.size();
-  vector<double> auxV;
+  ublas::vector<double> auxV;
   for (unsigned i = 0; i < params_nbr + 1; ++i) {
     xi0.push_back(auxV);
     xi0[i].resize(N);
@@ -54,6 +55,7 @@ void BLP::allocate()
     D2[i].resize(N);
     s_calc.push_back(auxV);
     s_calc[i].resize(N);
+    std::fill(s_calc[i].data().begin(), s_calc[i].data().end(), .1);
     ln_s_obs.push_back(auxV);
     ln_s_obs[i].resize(N);
   }
@@ -64,12 +66,13 @@ void BLP::calc_objective(const double contract_tol, unsigned th)
   // initialization
   // observe s_obs = s_obs_wg * pop_ave * mu (s_obs_wg is within group share)
   for (unsigned i = 0; i < N; ++i) {
-    ln_s_obs[th][i] = std::max(std::log(s_obs_wg[i] * pop_ave[i] * P[th][14]),\
-			   std::numeric_limits<double>::lowest());
+    ln_s_obs[th][i] = std::max(std::log(s_obs_wg[i] * (pop_ave[i] / 1e6) *\
+					P[th][14]),\
+			       std::numeric_limits<double>::lowest());
   }
 
     
-  // Berry's Contraction 
+  /// Berry's Contraction 
   bool conv_check = 0;
   while (!conv_check) {
     for (unsigned i = 0; i < N; ++i) {
@@ -95,7 +98,7 @@ void BLP::calc_objective(const double contract_tol, unsigned th)
       }
     }
 
-    // Begin calc shares
+    /// calc shares
     
     // calc s_ind1 & s_ind2 (exp(Xbeta....))
     // check header file for params mapping to P
@@ -110,7 +113,7 @@ void BLP::calc_objective(const double contract_tol, unsigned th)
   			      xi1[th][i]) / P[th][13]);
     }
   
-    //calc D1 and D2
+    // calc D1 and D2
     double aux_D1 = 0;
     double aux_D2 = 0;
     unsigned initial_aux_i = 0;
@@ -147,20 +150,86 @@ void BLP::calc_objective(const double contract_tol, unsigned th)
   			  (1 + std::pow(D2[th][i], P[th][13]))));
     }
 
-    // DEBUG
-    double error = 0;
-    for (unsigned i = 0; i < N; ++i) {
-      error += std::pow(xi0[th][i] - xi1[th][i], 2);
-    }
-    std::cout << error << std::endl;
-    // ENDDEBUG
-    
     // Update unobs util
     xi0[th] = xi1[th];
   }
+
+  /// Compute objective function
+
+  // adjust xi for numerical limits
+  double lwr_bound = std::numeric_limits<double>::lowest() / 1e300;
+  for (unsigned i = 0; i < N; ++i) {
+    if (xi0[th][i] < lwr_bound)
+      xi0[th][i] = lwr_bound;
+  }
+
+  // y = (1/N xi'Z)I(1/N Z'xi)
+  ublas::identity_matrix<double> I (Z.size2());
+  y[th] = ublas::inner_prod(ublas::prod(1./N *\
+					ublas::prod(ublas::trans(xi0[th]),\
+						    Z), I), 1./N *\
+			    ublas::prod(ublas::trans(Z), xi0[th]));
 }
 
-void BLP::nelder_mead()
+void BLP::nelder_mead(const double contract_tol, const double alpha, const\
+		      double beta, const double gamma)
 {
-  unsigned x = 0;
+  /* pseudo-code:
+     highest y
+     new Ph = (1+alpha)Pbar -alpha Ph*/
+  
+  //allocate
+  P_bar.resize(params_nbr);
+  unsigned h;
+  unsigned l;
+
+  // basic functions
+  auto get_h = [&] () {
+		   std::vector<double>::iterator y_high;
+		   y_high = std::max_element(y.begin(), y.end());
+		   h = std::distance(y.begin(), y_high);
+		   return h;
+		 };
+  auto get_l = [&] () {
+		   std::vector<double>::iterator y_low;
+		   y_low = std::min_element(y.begin(), y.end());
+		   l = std::distance(y.begin(), y_low);
+		   return l;
+		 };
+  auto get_P_bar = [&] () {
+		 std::fill(P_bar.data().begin(), P_bar.data().end(), 0.);
+		 for (unsigned i = 0; i < params_nbr + 1; ++i) {
+		   if (i != h)
+		     P_bar += P[i];
+		 }
+		 P_bar /= params_nbr;
+		 return;
+	       };
+  auto reflect = [&] () {
+		   P[h] = (1 + alpha) * P_bar - alpha * P[h];
+		   return;
+		 };
+  auto expand = [&] () {
+		  P[h] = gamma * P[h] + (1 - gamma) * P_bar;
+		  return;
+		};
+
+  // procedural functions
+  auto step_1 = [&] () {
+		  get_h();
+		  get_P_bar();
+		  reflect();
+		  this->calc_objective(contract_tol, h);
+		};
+
+  // NM algorithm
+  step_1();
+  get_l();
+  if (l != h) {
+    step_1();
+  } else {
+    expand();
+  } // TODO continue from here
+  
+  unsigned x = 1e6; //debug stop
 }

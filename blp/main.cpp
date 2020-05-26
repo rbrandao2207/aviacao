@@ -40,15 +40,19 @@ int main(int argc, char* argv[])
   const std::string results_dir = "results/";
   const std::string persist_file = results_dir + "arrays/" + run_id;
 
-  // estimation params:
+  /// Estimation params:
   // initial guess ((alpha, beta)_r, gamma, lambda, mu)
-  // initial tetrahedron "size" for Nelder Mead procedure
+  const std::vector<double> init_guess = {.1, .1, .1, .1, .1, .1, .1, .1, .1, .1,\
+					  .1, .1, .5, .8, .01};
   // BLP contraction tolerance
-  const std::vector<double> init_guess = {.1, .1, .1, .1, .1, .1, .1, .1, .1, \
-					  .1, .1, .1, .5, .8, .01};
+  const double contract_tol = {.01};
+  // initial tetrahedron "size" for Nelder Mead procedure
   const double init_tetra_size = {.1};
-  const double contract_tol = .01;
-
+  // NM coefficients
+  const double alpha = {1.}; // reflection, alpha > 0
+  const double beta = {.5};  // contraction, beta in [0,1]
+  const double gamma = {2.}; // expansion, gamma > 1
+  
   /* END OF PARAMETERS */
 
   if (argc > 1 && std::strcmp(argv[1], "genarrays") == 0) {
@@ -76,17 +80,17 @@ int main(int argc, char* argv[])
         ia >> inst_BLP;
     }
     inst_BLP.allocate();
-    // GMM estimation
+    // calc initial simplex
     std::vector<std::thread> threads;
-    while (true) { // TODO NM stop
-      for (unsigned th = 0; th < inst_BLP.params_nbr + 1; ++th) {
-        threads.push_back(std::thread(&BLP::calc_objective, std::ref(inst_BLP), contract_tol, th));
-      }
-      for (auto& thread : threads)
-        thread.join();
-      break;
+    for (unsigned th = 0; th < inst_BLP.params_nbr + 1; ++th) {
+      threads.push_back(std::thread(&BLP::calc_objective, std::ref(inst_BLP),\
+				    contract_tol, th));
     }
-    inst_BLP.nelder_mead();
+    for (auto& thread : threads) {
+      thread.join();
+    }
+    // NM procedure
+    inst_BLP.nelder_mead(contract_tol, alpha, beta, gamma);
 
   } else {
     std::cout << "Invalid args!" << std::endl;
