@@ -14,6 +14,7 @@ namespace ublas = boost::numeric::ublas;
 class BLP
 {
 public:
+  
   BLP(const std::vector<double> init_guess, const double init_tetra_size);
 
   template<class Archive>
@@ -31,16 +32,15 @@ public:
   void allocate();
   void calc_objective(const double contract_tol, unsigned th);
   void nelder_mead(const double contract_tol, const double alpha, const double\
-		   beta, const double gamma);
+		   beta, const double gamma, std::vector<double>& points);
   /* alpha: reflection coeff
      beta:  contraction coeff
      gamma: expansion coeff*/
 
 private:
+  
   // Exogenous vars 
-
   unsigned N;
-
   ublas::vector<double> s_obs_wg;
   ublas::vector<double> mkt_id;
   ublas::vector<double> pop_ave;
@@ -59,14 +59,18 @@ private:
                          4 carrier dummy
                          5 time dummy */
 
-  // PARAMS (15 total):
-  
-  std::vector<ublas::vector<double>> P;
-  // 0: beta1_0, 1: beta1_1, 2: beta1_2, 3: beta1_3, 4: beta1_4, 5: beta1_5;
-  // 6: beta2_0, 7: beta2_1, 8: beta2_2, 9: beta2_3, 10: beta2_4, 11: beta2_5;
-  // 12: gamma, 13: lambda, 14: mu;
-  // Nelder mead points contain params, N+1=16 total, std container for those:
 
+  std::vector<ublas::vector<double>> P;
+  /* Params are 15 total:
+     0: beta1_0, 1: beta1_1, 2: beta1_2, 3: beta1_3, 4: beta1_4, 5: beta1_5;
+     6: beta2_0, 7: beta2_1, 8: beta2_2, 9: beta2_3, 10: beta2_4, 11: beta2_5;
+     12: gamma, 13: lambda, 14: mu 
+     NM procedures takes N + 1 = 16 P's, + 
+                      P_bar (P[16]), P_star (P[17]) and P_dstar (P[18]) */
+
+  // Objective function values
+  std::vector<double> y;
+  
   // Calc vars
 
   // unobserved utility
@@ -79,10 +83,6 @@ private:
   std::vector<ublas::vector<double>> D2;
   std::vector<ublas::vector<double>> s_calc;
   std::vector<ublas::vector<double>> ln_s_obs;
-  // objective function values
-  std::vector<double> y;
-  // NM other auxiliary
-  ublas::vector<double> P_bar;
 };
 
 #endif

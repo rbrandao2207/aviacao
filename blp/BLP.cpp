@@ -17,8 +17,8 @@ BLP::BLP(const std::vector<double> init_guess, const double init_tetra_size)
   params_nbr = init_guess.size();
   ublas::vector<double> auxP;
   auxP.resize(params_nbr);
-  for (unsigned i = 0; i < params_nbr + 1; ++i) {
-    P.push_back(auxP);
+  for (unsigned i = 0; i < params_nbr + 4; ++i) {
+    P.push_back(auxP); //init P0, ..., Pn+1, P_bar, P_star, P_dstar
     y.push_back(0.); // init y
   }
   // initialize P's, P[0] at center
@@ -61,13 +61,13 @@ void BLP::allocate()
   }
 }
 
-void BLP::calc_objective(const double contract_tol, unsigned th)
+void BLP::calc_objective(const double contract_tol, unsigned pt)
 {
   // initialization
   // observe s_obs = s_obs_wg * pop_ave * mu (s_obs_wg is within group share)
   for (unsigned i = 0; i < N; ++i) {
-    ln_s_obs[th][i] = std::max(std::log(s_obs_wg[i] * (pop_ave[i] / 1e6) *\
-					P[th][14]),\
+    ln_s_obs[pt][i] = std::max(std::log(s_obs_wg[i] * (pop_ave[i] / 1e6) *\
+					P[pt][14]),\
 			       std::numeric_limits<double>::lowest());
   }
 
@@ -76,11 +76,11 @@ void BLP::calc_objective(const double contract_tol, unsigned th)
   bool conv_check = 0;
   while (!conv_check) {
     for (unsigned i = 0; i < N; ++i) {
-      if (ln_s_obs[th][i] == std::numeric_limits<double>::lowest()) {
-        xi1[th][i] = std::numeric_limits<double>::lowest();
+      if (ln_s_obs[pt][i] == std::numeric_limits<double>::lowest()) {
+        xi1[pt][i] = std::numeric_limits<double>::lowest();
       } else {
-        xi1[th][i] = xi0[th][i] + P[th][13] * (ln_s_obs[th][i] -\
-					       std::log(s_calc[th][i]));
+        xi1[pt][i] = xi0[pt][i] + P[pt][13] * (ln_s_obs[pt][i] -\
+					       std::log(s_calc[pt][i]));
       }
     }
 
@@ -90,7 +90,7 @@ void BLP::calc_objective(const double contract_tol, unsigned th)
         conv_check = 1;
         break;
       }
-      if (std::abs(xi1[th][i] - xi0[th][i]) < contract_tol) {
+      if (std::abs(xi1[pt][i] - xi0[pt][i]) < contract_tol) {
         continue;
     		
       } else {
@@ -103,14 +103,14 @@ void BLP::calc_objective(const double contract_tol, unsigned th)
     // calc s_ind1 & s_ind2 (exp(Xbeta....))
     // check header file for params mapping to P
     for (unsigned i = 0; i < N; ++i) {
-      s_aux1[th][i] = std::exp((X(i, 0) * P[th][0] + X(i, 1) * P[th][1] +\
-  			      X(i, 2) * P[th][2] + X(i, 3) * P[th][3] +\
-  			      X(i, 4) * P[th][4] + X(i, 5) * P[th][5] +\
-  			      xi1[th][i]) / P[th][13]);
-      s_aux2[th][i] = std::exp((X(i, 0) * P[th][6] + X(i, 1) * P[th][7] +\
-  			      X(i, 2) * P[th][8] + X(i, 3) * P[th][9] +\
-  			      X(i, 4) * P[th][10] + X(i, 5) * P[th][11] +\
-  			      xi1[th][i]) / P[th][13]);
+      s_aux1[pt][i] = std::exp((X(i, 0) * P[pt][0] + X(i, 1) * P[pt][1] +\
+  			      X(i, 2) * P[pt][2] + X(i, 3) * P[pt][3] +\
+  			      X(i, 4) * P[pt][4] + X(i, 5) * P[pt][5] +\
+  			      xi1[pt][i]) / P[pt][13]);
+      s_aux2[pt][i] = std::exp((X(i, 0) * P[pt][6] + X(i, 1) * P[pt][7] +\
+  			      X(i, 2) * P[pt][8] + X(i, 3) * P[pt][9] +\
+  			      X(i, 4) * P[pt][10] + X(i, 5) * P[pt][11] +\
+  			      xi1[pt][i]) / P[pt][13]);
     }
   
     // calc D1 and D2
@@ -120,38 +120,38 @@ void BLP::calc_objective(const double contract_tol, unsigned th)
     unsigned aux_mkt_id = 0;
     for (unsigned i = 0; i < N; ++i) {
       if (aux_mkt_id == mkt_id[i]) {
-        aux_D1 += s_aux1[th][i];
-        aux_D2 += s_aux2[th][i];
+        aux_D1 += s_aux1[pt][i];
+        aux_D2 += s_aux2[pt][i];
       } else {
         for (unsigned j = initial_aux_i; j < i; ++j) {
-          D1[th][j] = aux_D1;
-          D2[th][j] = aux_D2;
+          D1[pt][j] = aux_D1;
+          D2[pt][j] = aux_D2;
         }
-        aux_D1 = s_aux1[th][i];
-        aux_D2 = s_aux2[th][i];
+        aux_D1 = s_aux1[pt][i];
+        aux_D2 = s_aux2[pt][i];
         initial_aux_i = i;
         aux_mkt_id = mkt_id[i];
       }
       if (i == N - 1) {
         for (unsigned j = initial_aux_i; j < i; ++j) {
-          D1[th][j] = aux_D1;
-          D2[th][j] = aux_D2;
+          D1[pt][j] = aux_D1;
+          D2[pt][j] = aux_D2;
         }
       }
     }
   
     // compute model shares
     for (unsigned i = 0; i < N; ++i) {
-      s_calc[th][i] = P[th][12] * ((s_aux1[th][i] / D1[th][i]) *\
-  				 (std::pow(D1[th][i], P[th][13]) /\
-  				  (1 + std::pow(D1[th][i], P[th][13])))) +\
-        (1 - P[th][12]) * ((s_aux2[th][i] / D2[th][i]) *\
-  			 (std::pow(D2[th][i], P[th][13]) /\
-  			  (1 + std::pow(D2[th][i], P[th][13]))));
+      s_calc[pt][i] = P[pt][12] * ((s_aux1[pt][i] / D1[pt][i]) *\
+  				 (std::pow(D1[pt][i], P[pt][13]) /\
+  				  (1 + std::pow(D1[pt][i], P[pt][13])))) +\
+        (1 - P[pt][12]) * ((s_aux2[pt][i] / D2[pt][i]) *\
+  			 (std::pow(D2[pt][i], P[pt][13]) /\
+  			  (1 + std::pow(D2[pt][i], P[pt][13]))));
     }
 
     // Update unobs util
-    xi0[th] = xi1[th];
+    xi0[pt] = xi1[pt];
   }
 
   /// Compute objective function
@@ -159,27 +159,23 @@ void BLP::calc_objective(const double contract_tol, unsigned th)
   // adjust xi for numerical limits
   double lwr_bound = std::numeric_limits<double>::lowest() / 1e300;
   for (unsigned i = 0; i < N; ++i) {
-    if (xi0[th][i] < lwr_bound)
-      xi0[th][i] = lwr_bound;
+    if (xi0[pt][i] < lwr_bound)
+      xi0[pt][i] = lwr_bound;
   }
 
   // y = (1/N xi'Z)I(1/N Z'xi)
   ublas::identity_matrix<double> I (Z.size2());
-  y[th] = ublas::inner_prod(ublas::prod(1./N *\
-					ublas::prod(ublas::trans(xi0[th]),\
+  y[pt] = ublas::inner_prod(ublas::prod(1./N *\
+					ublas::prod(ublas::trans(xi0[pt]),\
 						    Z), I), 1./N *\
-			    ublas::prod(ublas::trans(Z), xi0[th]));
+			    ublas::prod(ublas::trans(Z), xi0[pt]));
 }
 
 void BLP::nelder_mead(const double contract_tol, const double alpha, const\
-		      double beta, const double gamma)
+		      double beta, const double gamma, std::vector<double>&\
+		      points)
 {
-  /* pseudo-code:
-     highest y
-     new Ph = (1+alpha)Pbar -alpha Ph*/
-  
   //allocate
-  P_bar.resize(params_nbr);
   unsigned h;
   unsigned l;
 
@@ -200,13 +196,13 @@ void BLP::nelder_mead(const double contract_tol, const double alpha, const\
 		 std::fill(P_bar.data().begin(), P_bar.data().end(), 0.);
 		 for (unsigned i = 0; i < params_nbr + 1; ++i) {
 		   if (i != h)
-		     P_bar += P[i];
+		     P[params_nbr+2] += P[i];
 		 }
-		 P_bar /= params_nbr;
+		 P[params_nbr+2] /= params_nbr;
 		 return;
 	       };
   auto reflect = [&] () {
-		   P[h] = (1 + alpha) * P_bar - alpha * P[h];
+		   P[h] = (1 + alpha) * P[params_nbr+2] - alpha * P[h];
 		   return;
 		 };
   auto expand = [&] () {
@@ -229,7 +225,8 @@ void BLP::nelder_mead(const double contract_tol, const double alpha, const\
     step_1();
   } else {
     expand();
-  } // TODO continue from here
-  
+  }
+
+  // return points 
   unsigned x = 1e6; //debug stop
 }

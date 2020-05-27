@@ -71,7 +71,10 @@ int main(int argc, char* argv[])
   } else if ((argc > 1 && std::strcmp(argv[1], "estimation") == 0) || \
 	     (argc > 2 && std::strcmp(argv[1], "genarrays") == 0 && \
 	      std::strcmp(argv[2], "estimation") == 0)) {
+
+    // instantiate
     BLP inst_BLP(init_guess, init_tetra_size);
+    
     // deserialize
     {
         std::ifstream ifs(persist_file);
@@ -80,17 +83,26 @@ int main(int argc, char* argv[])
         ia >> inst_BLP;
     }
     inst_BLP.allocate();
-    // calc initial simplex
-    std::vector<std::thread> threads;
-    for (unsigned th = 0; th < inst_BLP.params_nbr + 1; ++th) {
-      threads.push_back(std::thread(&BLP::calc_objective, std::ref(inst_BLP),\
-				    contract_tol, th));
+    
+    // GMM
+    std::vector<unsigned> points;
+    for (unsigned i = 0; i < inst_BLP.params_nbr + 1; ++i) {
+      points.push_back(i);
     }
-    for (auto& thread : threads) {
-      thread.join();
+    while (True) {
+      // calc simplex
+      std::vector<std::thread> threads;
+      for (auto& pt : points) {
+        threads.push_back(std::thread(&BLP::calc_objective, std::ref(inst_BLP),\
+      				    contract_tol, pt));
+      }
+      for (auto& thread : threads) {
+        thread.join();
+      }
+      // NM procedure
+      inst_BLP.nelder_mead(contract_tol, alpha, beta, gamma, points);
+      break;
     }
-    // NM procedure
-    inst_BLP.nelder_mead(contract_tol, alpha, beta, gamma);
 
   } else {
     std::cout << "Invalid args!" << std::endl;
