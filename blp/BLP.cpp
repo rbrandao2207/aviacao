@@ -12,9 +12,14 @@
 namespace ublas = boost::numeric::ublas;
 
 
-BLP::BLP(const std::vector<double> init_guess, const double init_tetra_size)
+BLP::BLP(const std::vector<double> init_guess, const double min_share_, const\
+	 double contract_tol_, const double penalty_param1_, const unsigned\
+	 penalty_param2_, const double init_tetra_size)
 {
-
+  min_share = min_share_;
+  contract_tol = contract_tol_;
+  penalty_param1 = penalty_param1_;
+  penalty_param2 = penalty_param2_;
   params_nbr = init_guess.size();
   ublas::vector<double> auxP;
   auxP.resize(params_nbr);
@@ -63,27 +68,40 @@ void BLP::allocate()
   }
 }
 
-void BLP::calc_objective(const double contract_tol, const double penalty_param,\
-			 unsigned iter_nbr, unsigned pt)
+void BLP::calc_objective(unsigned iter_nbr, unsigned pt)
 {
   // initialization
   // observe s_obs = s_obs_wg * pop_ave * mu (s_obs_wg is within group share)
   for (unsigned i = 0; i < N; ++i) {
     ln_s_obs[pt][i] = std::max(std::log(s_obs_wg[i] * (pop_ave[i] / 1e6) *\
+					P[pt][14]), std::log(min_share *\
+							     (pop_ave[i] / 1e6)\
+							     * P[pt][14]));
+    /*DEBUG previous version
+    ln_s_obs[pt][i] = std::max(std::log(s_obs_wg[i] * (pop_ave[i] / 1e6) *\
 					P[pt][14]),\
 			       std::numeric_limits<double>::lowest());
+    */
   }
 
   /// Berry's Contraction 
   bool conv_check = 0;
   while (!conv_check) {
     for (unsigned i = 0; i < N; ++i) {
+      xi1[pt][i] = xi0[pt][i] + ln_s_obs[pt][i] - std::log(s_calc[pt][i]);
+      /*DEBUG previous version
       if (ln_s_obs[pt][i] == std::numeric_limits<double>::lowest()) {
         xi1[pt][i] = std::numeric_limits<double>::lowest();
       } else {
-        xi1[pt][i] = xi0[pt][i] + P[pt][13] * (ln_s_obs[pt][i] -\
-					       std::log(s_calc[pt][i]));
-      }
+	// lambda version (BJ10)
+	//xi1[pt][i] = xi0[pt][i] + P[pt][13] * (ln_s_obs[pt][i] -\
+	//std::log(s_calc[pt][i])); 
+        xi1[pt][i] = xi0[pt][i] + ln_s_obs[pt][i] - std::log(s_calc[pt][i]);
+	//DEBUG
+	std::cout << P[pt][13] << '\r' << std::flush;
+        ENDDEBUG
+      }ENDDEBUG*/
+    
     }
 
     // check for convergence
@@ -93,12 +111,18 @@ void BLP::calc_objective(const double contract_tol, const double penalty_param,\
         break;
       }
       if (std::abs(xi1[pt][i] - xi0[pt][i]) < contract_tol) {
+	/*DEBUG
+ 	std::cout << std::abs(xi1[pt][i] - xi0[pt][i]) << '\t' << i << '\t' <<\
+	  pt << ' ' << P[pt][12] << ' ' << P[pt][13] << ' ' << P[pt][14] <<\
+	  '\r' << std::flush;
+	  //ENDDEBUG*/
         continue;
       } else {
-	/*DEBUG
-	std::cout << std::abs(xi1[pt][i] - xi0[pt][i]) << '\t' << i << '\r'\
-		  << std::flush;
-	ENDDEBUG*/
+	//DEBUG
+ 	std::cout << std::abs(xi1[pt][i] - xi0[pt][i]) << '\t' << i << '\t' <<\
+	  pt << ' ' << P[pt][12] << ' ' << P[pt][13] << ' ' << P[pt][14] <<\
+	  '\r' << std::endl;
+	//ENDDEBUG
         break;
       }
     }
@@ -175,16 +199,21 @@ void BLP::calc_objective(const double contract_tol, const double penalty_param,\
 						    Z), I), 1./N *\
 			    ublas::prod(ublas::trans(Z), xi0[pt]));
 
-  // Add penalty for constraints violation (lambda not in [0,1], or mu < 0)
-  double penalty = {0};
-  if (P[pt][13] < 0.) {
-    penalty += std::abs(P[pt][13]);
+  /* Add penalty for constraints violation (gamma or lambda not in [0,1], or \
+     mu < 0) */
+  double penalty = {0.};
+  if (P[pt][12] < 0.) {
+    penalty += std::pow(1 + P[pt][12], penalty_param2);
+  } else if (P[pt][12] > 1.) {
+    penalty += std::pow(P[pt][12], penalty_param2);
+  } else if (P[pt][13] < 0.) {
+    penalty += std::pow(1 + P[pt][13], penalty_param2);
   } else if (P[pt][13] > 1.) {
-    penalty += P[pt][13];
+    penalty += std::pow(P[pt][13], penalty_param2);
   } else if (P[pt][14] < 0.) {
-    penalty += P[pt][14];
+    penalty += std::pow(1 + P[pt][14], penalty_param2);
   }
-  penalty *= penalty_param * 10 * iter_nbr;
+  penalty *= penalty_param1 * iter_nbr;
   y[pt] += penalty;
 
 }
@@ -199,7 +228,7 @@ bool BLP::halt_check(const double NM_tol, unsigned iter_nbr)
   }
   y_std = y_std / y.size();
   std::cout << y_std << '\t' << "# of iterations: " << iter_nbr << '\r' <<\
-    std::flush;
+    std::endl;
   /*DEBUG
   std::cout << P[1][0] << '\t' << P[1][1] << '\t' << P[1][2] << '\t' <<\
             P[1][3] << '\r' << std::flush;
@@ -211,8 +240,7 @@ bool BLP::halt_check(const double NM_tol, unsigned iter_nbr)
   }
 }
 
-void BLP::nelder_mead(const double contract_tol, const double penalty_param,\
-		      unsigned iter_nbr, const double alpha, const double beta,\
+void BLP::nelder_mead(unsigned iter_nbr, const double alpha, const double beta,\
 		      const double gamma, std::vector<unsigned>& points)
 {
   //allocate
@@ -243,21 +271,18 @@ void BLP::nelder_mead(const double contract_tol, const double penalty_param,\
   auto reflection = [&] () {
 		   P[params_nbr+2] = (1 + alpha) * P[params_nbr+1] - alpha *\
 		     P[h];
-		   this->calc_objective(contract_tol, penalty_param, iter_nbr,\
-					params_nbr+2);
+		   this->calc_objective(iter_nbr, params_nbr+2);
 		   return;
 		 };
   auto expansion = [&] () {
 		  P[params_nbr+3] = gamma * P[params_nbr+2] + (1 - gamma) *\
 		    P[params_nbr+1];
-		  this->calc_objective(contract_tol, penalty_param, iter_nbr,\
-				       params_nbr+3);
+		  this->calc_objective(iter_nbr, params_nbr+3);
 		  return;
 		};
   auto contraction = [&] () {
 		  P[params_nbr+3] = beta * P[h] + (1 - beta) * P[params_nbr+1];
-		  this->calc_objective(contract_tol, penalty_param, iter_nbr,\
-				       params_nbr+3);
+		  this->calc_objective(iter_nbr, params_nbr+3);
 		  return;
 		};
   /* where P^bar = P[params_nbr+1],
@@ -292,7 +317,7 @@ void BLP::nelder_mead(const double contract_tol, const double penalty_param,\
     if (test) { // y* > yi all i ?
       if (y[params_nbr+2] < y[h]) { // y* < yh ?
 	P[h] = P[params_nbr+2]; // replace Ph by P* (intermediate)
-	this->calc_objective(contract_tol, penalty_param, iter_nbr, h);
+	this->calc_objective(iter_nbr, h);
       }
       contraction();
       if (y[params_nbr+3] > y[h]) { // y** > yh ?

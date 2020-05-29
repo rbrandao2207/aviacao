@@ -44,17 +44,20 @@ int main(int argc, char* argv[])
   // initial guess ((alpha, beta)_r, gamma, lambda, mu)
   const std::vector<double> init_guess = {.1, .1, .1, .1, .1, .1, .1, .1, .1, .1,\
 					  .1, .1, .5, .8, .01};
+  // minimum 'observed shares' for numerical feasibility
+  const double min_share = 1e-4;
   // BLP contraction tolerance
   const double contract_tol = {1e-6};
-  // Constrained optimization penalty
-  const double penalty_param = {1e2};
+  // constrained optimization penalty
+  const double penalty_param1 = {1e6};
+  const unsigned penalty_param2 = {4}; // (must be even)
   // initial tetrahedron "size" for Nelder Mead procedure
   const double init_tetra_size = {.1};
   // NM coefficients
   const double NM_tol = {.5}; // halt parameter
-  const double alpha = {1.}; // reflection, alpha > 0
-  const double beta = {.5};  // contraction, beta in [0,1]
-  const double gamma = {2.}; // expansion, gamma > 1
+  const double alpha = {.2}; // reflection, alpha > 0
+  const double beta = {.1}; // contraction, beta in [0,1]
+  const double gamma = {1.2}; // expansion, gamma > 1
   
   /* END OF PARAMETERS */
 
@@ -76,7 +79,8 @@ int main(int argc, char* argv[])
 	      std::strcmp(argv[2], "estimation") == 0)) {
 
     // instantiate
-    BLP inst_BLP(init_guess, init_tetra_size);
+    BLP inst_BLP(init_guess, min_share, contract_tol, penalty_param1,\
+		 penalty_param2, init_tetra_size);
     
     // deserialize
     {
@@ -95,11 +99,10 @@ int main(int argc, char* argv[])
     unsigned iter_nbr = 0;
     while (true) {
       // calc simplex
-      std::vector<std::thread> threads;
+      std::vector<std::thread> threads = {};
       for (auto& pt : points) {
         threads.push_back(std::thread(&BLP::calc_objective, std::ref(inst_BLP),\
-				      contract_tol, penalty_param, iter_nbr,\
-				      pt));
+				      iter_nbr, pt));
       }
       for (auto& thread : threads) {
         thread.join();
@@ -108,8 +111,7 @@ int main(int argc, char* argv[])
       if (inst_BLP.halt_check(NM_tol, iter_nbr))
 	break;
       // NM procedure
-      inst_BLP.nelder_mead(contract_tol, penalty_param, iter_nbr, alpha, beta,\
-			   gamma, points);
+      inst_BLP.nelder_mead(iter_nbr, alpha, beta, gamma, points);
       ++iter_nbr;
     }
 

@@ -15,7 +15,9 @@ class BLP
 {
 public:
   
-  BLP(const std::vector<double> init_guess, const double init_tetra_size);
+  BLP(const std::vector<double> init_guess, const double min_share_, const\
+      double contract_tol_, const double penalty_param1_, const unsigned\
+      penalty_param2_, const double init_tetra_size);
 
   template<class Archive>
   void serialize(Archive & ar, const unsigned int version)
@@ -30,18 +32,21 @@ public:
   unsigned params_nbr;
 
   void allocate();
-  void calc_objective(const double contract_tol, const double penalty_param,\
-		      unsigned iter_nbr, unsigned pt);
+  void calc_objective(unsigned iter_nbr, unsigned pt);
   bool halt_check(const double NM_tol, unsigned iter_nbr);
-  void nelder_mead(const double contract_tol, const double penalty_param,\
-		   unsigned iter_nbr, const double alpha, const double beta,\
+  void nelder_mead(unsigned iter_nbr, const double alpha, const double beta,\
 		   const double gamma, std::vector<unsigned>& points);
   /* alpha: reflection coeff
      beta:  contraction coeff
      gamma: expansion coeff*/
 
 private:
-  
+
+  // Params
+  double min_share;
+  double contract_tol;
+  double penalty_param1;
+  unsigned penalty_param2;
   // Exogenous vars 
   unsigned N;
   ublas::vector<double> s_obs_wg;
