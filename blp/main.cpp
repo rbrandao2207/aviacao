@@ -45,10 +45,11 @@ int main(int argc, char* argv[])
   const std::vector<double> init_guess = {.1, .1, .1, .1, .1, .1, .1, .1, .1, .1,\
 					  .1, .1, .5, .8, .01};
   // BLP contraction tolerance
-  const double contract_tol = {.01};
+  const double contract_tol = {1e-6};
   // initial tetrahedron "size" for Nelder Mead procedure
   const double init_tetra_size = {.1};
   // NM coefficients
+  const double NM_tol = {.5}; // halt parameter
   const double alpha = {1.}; // reflection, alpha > 0
   const double beta = {.5};  // contraction, beta in [0,1]
   const double gamma = {2.}; // expansion, gamma > 1
@@ -89,7 +90,8 @@ int main(int argc, char* argv[])
     for (unsigned i = 0; i < inst_BLP.params_nbr + 1; ++i) {
       points.push_back(i);
     }
-    while (True) {
+    unsigned iter_nbr = 0;
+    while (true) {
       // calc simplex
       std::vector<std::thread> threads;
       for (auto& pt : points) {
@@ -99,9 +101,12 @@ int main(int argc, char* argv[])
       for (auto& thread : threads) {
         thread.join();
       }
+      // halt check
+      if (inst_BLP.halt_check(NM_tol, iter_nbr))
+	break;
       // NM procedure
       inst_BLP.nelder_mead(contract_tol, alpha, beta, gamma, points);
-      break;
+      ++iter_nbr;
     }
 
   } else {

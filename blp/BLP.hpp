@@ -31,8 +31,9 @@ public:
 
   void allocate();
   void calc_objective(const double contract_tol, unsigned th);
+  bool halt_check(const double NM_tol, unsigned iter_nbr);
   void nelder_mead(const double contract_tol, const double alpha, const double\
-		   beta, const double gamma, std::vector<double>& points);
+		   beta, const double gamma, std::vector<unsigned>& points);
   /* alpha: reflection coeff
      beta:  contraction coeff
      gamma: expansion coeff*/
@@ -65,8 +66,8 @@ private:
      0: beta1_0, 1: beta1_1, 2: beta1_2, 3: beta1_3, 4: beta1_4, 5: beta1_5;
      6: beta2_0, 7: beta2_1, 8: beta2_2, 9: beta2_3, 10: beta2_4, 11: beta2_5;
      12: gamma, 13: lambda, 14: mu 
-     NM procedures takes N + 1 = 16 P's, + 
-                      P_bar (P[16]), P_star (P[17]) and P_dstar (P[18]) */
+     NM procedures takes number of params + 1 = 16 P's, + 
+       P^bar (params_nbr+1), P* (params_nbr+2) and P** (params_nbr+3) */
 
   // Objective function values
   std::vector<double> y;

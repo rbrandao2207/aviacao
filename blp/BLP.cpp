@@ -2,6 +2,7 @@
 #include <cmath>
 #include <iostream>
 #include <limits>
+#include <numeric>
 #include <vector>
 
 #include <boost/numeric/ublas/vector.hpp>
@@ -17,12 +18,13 @@ BLP::BLP(const std::vector<double> init_guess, const double init_tetra_size)
   params_nbr = init_guess.size();
   ublas::vector<double> auxP;
   auxP.resize(params_nbr);
-  for (unsigned i = 0; i < params_nbr + 4; ++i) {
-    P.push_back(auxP); //init P0, ..., Pn+1, P_bar, P_star, P_dstar
+  for (unsigned i = 0; i < params_nbr+4; ++i) {
+    P.push_back(auxP); /* init P0, ..., Pn+1 (=P[15], where params_nbr=15),
+                          P^bar (P[params_nbr+1]), P* (...+2), P** (...+3) */ 
     y.push_back(0.); // init y
   }
   // initialize P's, P[0] at center
-  for (unsigned i = 0; i < params_nbr + 1; ++i) {
+  for (unsigned i = 0; i < params_nbr+1; ++i) {
     for (unsigned j = 0; j < params_nbr; ++j) {
       if (i == 0 || j != i) {
 	P[i][j] = init_guess[j];
@@ -38,7 +40,7 @@ void BLP::allocate()
   // Initialize N, unobs util, and allocate other ublas objs
   N = s_obs_wg.size();
   ublas::vector<double> auxV;
-  for (unsigned i = 0; i < params_nbr + 1; ++i) {
+  for (unsigned i = 0; i < params_nbr+4; ++i) {
     xi0.push_back(auxV);
     xi0[i].resize(N);
     std::fill(xi0[i].data().begin(), xi0[i].data().end(), 0.);
@@ -71,6 +73,12 @@ void BLP::calc_objective(const double contract_tol, unsigned pt)
 			       std::numeric_limits<double>::lowest());
   }
 
+  // adjust lambda in [0,1]
+  if (P[pt][13] > 1.) {
+    P[pt][13] = 1.;
+  } else if (P[pt][13] < 0.) {
+    P[pt][13] = 0;
+  }
     
   /// Berry's Contraction 
   bool conv_check = 0;
@@ -92,8 +100,11 @@ void BLP::calc_objective(const double contract_tol, unsigned pt)
       }
       if (std::abs(xi1[pt][i] - xi0[pt][i]) < contract_tol) {
         continue;
-    		
       } else {
+	/*DEBUG
+	std::cout << std::abs(xi1[pt][i] - xi0[pt][i]) << '\t' << i << '\r'\
+		  << std::flush;
+	ENDDEBUG*/
         break;
       }
     }
@@ -171,15 +182,37 @@ void BLP::calc_objective(const double contract_tol, unsigned pt)
 			    ublas::prod(ublas::trans(Z), xi0[pt]));
 }
 
+bool BLP::halt_check(const double NM_tol, unsigned iter_nbr)
+{
+  double y_sum = std::accumulate(y.begin(), y.end(), 0.);
+  double y_avg = y_sum / y.size();
+  double y_std = 0.;
+  for (auto& y_elem : y) {
+    y_std += std::pow(y_elem - y_avg, 2);
+  }
+  y_std = y_std / y.size();
+  std::cout << y_std << '\t' << "# of iterations: " << iter_nbr << '\r' <<\
+    std::flush;
+  /*DEBUG
+  std::cout << P[1][0] << '\t' << P[1][1] << '\t' << P[1][2] << '\t' <<\
+            P[1][3] << '\r' << std::flush;
+  ENDDEBUG*/
+  if (y_std < NM_tol) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
 void BLP::nelder_mead(const double contract_tol, const double alpha, const\
-		      double beta, const double gamma, std::vector<double>&\
+		      double beta, const double gamma, std::vector<unsigned>&\
 		      points)
 {
   //allocate
   unsigned h;
   unsigned l;
 
-  // basic functions
+  // Basic functions
   auto get_h = [&] () {
 		   std::vector<double>::iterator y_high;
 		   y_high = std::max_element(y.begin(), y.end());
@@ -192,41 +225,80 @@ void BLP::nelder_mead(const double contract_tol, const double alpha, const\
 		   l = std::distance(y.begin(), y_low);
 		   return l;
 		 };
-  auto get_P_bar = [&] () {
-		 std::fill(P_bar.data().begin(), P_bar.data().end(), 0.);
-		 for (unsigned i = 0; i < params_nbr + 1; ++i) {
+  auto P_bar = [&] () {
+		 for (unsigned i = 0; i < params_nbr+1; ++i) {
 		   if (i != h)
-		     P[params_nbr+2] += P[i];
+		     P[params_nbr+1] += P[i];
 		 }
-		 P[params_nbr+2] /= params_nbr;
+		 P[params_nbr+1] /= params_nbr;
 		 return;
 	       };
-  auto reflect = [&] () {
-		   P[h] = (1 + alpha) * P[params_nbr+2] - alpha * P[h];
+  auto reflection = [&] () {
+		   P[params_nbr+2] = (1 + alpha) * P[params_nbr+1] - alpha *\
+		     P[h];
+		   this->calc_objective(contract_tol, params_nbr+2);
 		   return;
 		 };
-  auto expand = [&] () {
-		  P[h] = gamma * P[h] + (1 - gamma) * P_bar;
+  auto expansion = [&] () {
+		  P[params_nbr+3] = gamma * P[params_nbr+2] + (1 - gamma) *\
+		    P[params_nbr+1];
+		  this->calc_objective(contract_tol, params_nbr+3);
 		  return;
 		};
-
+  auto contraction = [&] () {
+		  P[params_nbr+3] = beta * P[h] + (1 - beta) * P[params_nbr+1];
+		  this->calc_objective(contract_tol, params_nbr+3);
+		  return;
+		};
+  /* where P^bar = P[params_nbr+1],
+     P* = P[params_nbr+2],
+     P** = P[params_nbr+3] */
+  
   // procedural functions
   auto step_1 = [&] () {
 		  get_h();
-		  get_P_bar();
-		  reflect();
-		  this->calc_objective(contract_tol, h);
+		  P_bar();
+		  reflection();
 		};
 
-  // NM algorithm
+  // NM algorithm (see Computer Journal 1965 page 2)
   step_1();
   get_l();
-  if (l != h) {
-    step_1();
+  if (y[params_nbr+2] < y[l]) { // y* < yl ?
+    expansion();
+    if (y[params_nbr+3] < y[l]) { // y** < yl ?
+      P[h] = P[params_nbr+3]; // Ph = P**
+      points = {h};
+    } else {
+      P[h] = P[params_nbr+2]; // Ph = P*
+      points = {h};
+    }
   } else {
-    expand();
+    bool test = true;
+    for (unsigned i = 0; i < params_nbr+1; ++i) {
+      if (y[params_nbr+2] < y[i])
+	test = false;
+    }
+    if (test) { // y* > yi all i ?
+      if (y[params_nbr+2] < y[h]) { // y* < yh ?
+	P[h] = P[params_nbr+2]; // replace Ph by P* (intermediate)
+	this->calc_objective(contract_tol, h);
+      }
+      contraction();
+      if (y[params_nbr+3] > y[h]) { // y** > yh ?
+	for (unsigned i = 0; i < params_nbr+1; ++i) {
+	  P[i] = (P[i] + P[l]) / 2; // Pi = (Pi + Pl) /2 all i
+	  points = {};
+	  for (unsigned i = 0; i < params_nbr+1; ++i) {
+	    points.push_back(i);
+	  }
+	}
+      } else {
+	P[h] = P[params_nbr+3];  // Ph = P**
+	points = {h};
+      }
+    } else {
+      P[h] = P[params_nbr+2]; // Ph = P*
+    }
   }
-
-  // return points 
-  unsigned x = 1e6; //debug stop
 }
