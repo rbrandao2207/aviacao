@@ -63,7 +63,8 @@ void BLP::allocate()
   }
 }
 
-void BLP::calc_objective(const double contract_tol, unsigned pt)
+void BLP::calc_objective(const double contract_tol, const double penalty_param,\
+			 unsigned iter_nbr, unsigned pt)
 {
   // initialization
   // observe s_obs = s_obs_wg * pop_ave * mu (s_obs_wg is within group share)
@@ -73,13 +74,6 @@ void BLP::calc_objective(const double contract_tol, unsigned pt)
 			       std::numeric_limits<double>::lowest());
   }
 
-  // adjust lambda in [0,1]
-  if (P[pt][13] > 1.) {
-    P[pt][13] = 1.;
-  } else if (P[pt][13] < 0.) {
-    P[pt][13] = 0;
-  }
-    
   /// Berry's Contraction 
   bool conv_check = 0;
   while (!conv_check) {
@@ -180,6 +174,19 @@ void BLP::calc_objective(const double contract_tol, unsigned pt)
 					ublas::prod(ublas::trans(xi0[pt]),\
 						    Z), I), 1./N *\
 			    ublas::prod(ublas::trans(Z), xi0[pt]));
+
+  // Add penalty for constraints violation (lambda not in [0,1], or mu < 0)
+  double penalty = {0};
+  if (P[pt][13] < 0.) {
+    penalty += std::abs(P[pt][13]);
+  } else if (P[pt][13] > 1.) {
+    penalty += P[pt][13];
+  } else if (P[pt][14] < 0.) {
+    penalty += P[pt][14];
+  }
+  penalty *= penalty_param * 10 * iter_nbr;
+  y[pt] += penalty;
+
 }
 
 bool BLP::halt_check(const double NM_tol, unsigned iter_nbr)
@@ -204,9 +211,9 @@ bool BLP::halt_check(const double NM_tol, unsigned iter_nbr)
   }
 }
 
-void BLP::nelder_mead(const double contract_tol, const double alpha, const\
-		      double beta, const double gamma, std::vector<unsigned>&\
-		      points)
+void BLP::nelder_mead(const double contract_tol, const double penalty_param,\
+		      unsigned iter_nbr, const double alpha, const double beta,\
+		      const double gamma, std::vector<unsigned>& points)
 {
   //allocate
   unsigned h;
@@ -236,18 +243,21 @@ void BLP::nelder_mead(const double contract_tol, const double alpha, const\
   auto reflection = [&] () {
 		   P[params_nbr+2] = (1 + alpha) * P[params_nbr+1] - alpha *\
 		     P[h];
-		   this->calc_objective(contract_tol, params_nbr+2);
+		   this->calc_objective(contract_tol, penalty_param, iter_nbr,\
+					params_nbr+2);
 		   return;
 		 };
   auto expansion = [&] () {
 		  P[params_nbr+3] = gamma * P[params_nbr+2] + (1 - gamma) *\
 		    P[params_nbr+1];
-		  this->calc_objective(contract_tol, params_nbr+3);
+		  this->calc_objective(contract_tol, penalty_param, iter_nbr,\
+				       params_nbr+3);
 		  return;
 		};
   auto contraction = [&] () {
 		  P[params_nbr+3] = beta * P[h] + (1 - beta) * P[params_nbr+1];
-		  this->calc_objective(contract_tol, params_nbr+3);
+		  this->calc_objective(contract_tol, penalty_param, iter_nbr,\
+				       params_nbr+3);
 		  return;
 		};
   /* where P^bar = P[params_nbr+1],
@@ -282,7 +292,7 @@ void BLP::nelder_mead(const double contract_tol, const double alpha, const\
     if (test) { // y* > yi all i ?
       if (y[params_nbr+2] < y[h]) { // y* < yh ?
 	P[h] = P[params_nbr+2]; // replace Ph by P* (intermediate)
-	this->calc_objective(contract_tol, h);
+	this->calc_objective(contract_tol, penalty_param, iter_nbr, h);
       }
       contraction();
       if (y[params_nbr+3] > y[h]) { // y** > yh ?

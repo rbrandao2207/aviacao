@@ -30,10 +30,12 @@ public:
   unsigned params_nbr;
 
   void allocate();
-  void calc_objective(const double contract_tol, unsigned th);
+  void calc_objective(const double contract_tol, const double penalty_param,\
+		      unsigned iter_nbr, unsigned pt);
   bool halt_check(const double NM_tol, unsigned iter_nbr);
-  void nelder_mead(const double contract_tol, const double alpha, const double\
-		   beta, const double gamma, std::vector<unsigned>& points);
+  void nelder_mead(const double contract_tol, const double penalty_param,\
+		   unsigned iter_nbr, const double alpha, const double beta,\
+		   const double gamma, std::vector<unsigned>& points);
   /* alpha: reflection coeff
      beta:  contraction coeff
      gamma: expansion coeff*/

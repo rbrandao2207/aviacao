@@ -46,6 +46,8 @@ int main(int argc, char* argv[])
 					  .1, .1, .5, .8, .01};
   // BLP contraction tolerance
   const double contract_tol = {1e-6};
+  // Constrained optimization penalty
+  const double penalty_param = {1e2};
   // initial tetrahedron "size" for Nelder Mead procedure
   const double init_tetra_size = {.1};
   // NM coefficients
@@ -96,7 +98,8 @@ int main(int argc, char* argv[])
       std::vector<std::thread> threads;
       for (auto& pt : points) {
         threads.push_back(std::thread(&BLP::calc_objective, std::ref(inst_BLP),\
-      				    contract_tol, pt));
+				      contract_tol, penalty_param, iter_nbr,\
+				      pt));
       }
       for (auto& thread : threads) {
         thread.join();
@@ -105,7 +108,8 @@ int main(int argc, char* argv[])
       if (inst_BLP.halt_check(NM_tol, iter_nbr))
 	break;
       // NM procedure
-      inst_BLP.nelder_mead(contract_tol, alpha, beta, gamma, points);
+      inst_BLP.nelder_mead(contract_tol, penalty_param, iter_nbr, alpha, beta,\
+			   gamma, points);
       ++iter_nbr;
     }
 
