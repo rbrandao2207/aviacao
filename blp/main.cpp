@@ -31,10 +31,14 @@ int main(int argc, char* argv[])
   const std::string run_id = "01";
 
   // price bins
-  const std::valarray<double> bins = {0, 200, 400, 600, 800, 1000, 1e5};
+  // run 01: const std::valarray<double> bins = {0, 200, 400, 600, 800, 1000, 1e5};
+  // genarrays run 02:
+  const std::valarray<double> bins = {0, 200, 400, 600, 800, 1e3, 2e3, 3e3, 1e4};
 
   // population threshold
-  const unsigned pop_thres = 1000000;
+  // run 01: const unsigned pop_thres = 1e6;
+  // genarrays run 02:
+  const unsigned pop_thres = 2.5e5;
 
   // results directory
   const std::string results_dir = "results/";
@@ -45,7 +49,7 @@ int main(int argc, char* argv[])
   const std::vector<double> init_guess = {.1, .1, .1, .1, .1, .1, .1, .1, .1, .1,\
 					  .1, .1, .5, .8, .01};
   // minimum 'observed shares' for numerical feasibility
-  const double min_share = 1e-4;
+  const double min_share = {1e-8};
   // BLP contraction tolerance
   const double contract_tol = {1e-6};
   // constrained optimization penalty

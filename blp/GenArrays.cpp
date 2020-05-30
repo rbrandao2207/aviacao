@@ -192,15 +192,14 @@ void GenArrays::gen_arrays()
                 initial_aux_i = i;
                 ++aux_mkt_id;
             }
-            if (i == products.size() - 1) {
-                for (unsigned x = initial_aux_i; x <= i; ++x) {
+            if (i == products.size()) {
+                for (unsigned x = initial_aux_i; x < i; ++x) {
                     s_obs_wg[x] /= mkt_total;
                     mkt_id[x] = aux_mkt_id;
                 }
-                std::cout << "Finished s, pop_ave and X calcs for mkt " + \
+		std::cout << "Finished s, pop_ave and X calcs for mkt " + \
                         curr_mkt << std::endl;
-                ++i;
-            }
+	    }
         }
     }
 }

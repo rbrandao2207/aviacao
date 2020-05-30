@@ -89,6 +89,8 @@ void BLP::calc_objective(unsigned iter_nbr, unsigned pt)
   while (!conv_check) {
     for (unsigned i = 0; i < N; ++i) {
       xi1[pt][i] = xi0[pt][i] + ln_s_obs[pt][i] - std::log(s_calc[pt][i]);
+      if (std::isnan(xi1[pt][i]))
+	std::cout << i << std::endl;
       /*DEBUG previous version
       if (ln_s_obs[pt][i] == std::numeric_limits<double>::lowest()) {
         xi1[pt][i] = std::numeric_limits<double>::lowest();
@@ -118,11 +120,11 @@ void BLP::calc_objective(unsigned iter_nbr, unsigned pt)
 	  //ENDDEBUG*/
         continue;
       } else {
-	//DEBUG
+	/*DEBUG
  	std::cout << std::abs(xi1[pt][i] - xi0[pt][i]) << '\t' << i << '\t' <<\
 	  pt << ' ' << P[pt][12] << ' ' << P[pt][13] << ' ' << P[pt][14] <<\
 	  '\r' << std::endl;
-	//ENDDEBUG
+	  //ENDDEBUG*/
         break;
       }
     }
@@ -162,7 +164,7 @@ void BLP::calc_objective(unsigned iter_nbr, unsigned pt)
         aux_mkt_id = mkt_id[i];
       }
       if (i == N - 1) {
-        for (unsigned j = initial_aux_i; j < i; ++j) {
+        for (unsigned j = initial_aux_i; j <= i; ++j) {
           D1[pt][j] = aux_D1;
           D2[pt][j] = aux_D2;
         }
