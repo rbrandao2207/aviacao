@@ -17,7 +17,8 @@ public:
   
   BLP(const std::vector<double> init_guess, const double min_share_, const\
       double contract_tol_, const double penalty_param1_, const unsigned\
-      penalty_param2_, const double init_tetra_size);
+      penalty_param2_, const double init_tetra_size1, const double\
+      init_tetra_size2);
 
   template<class Archive>
   void serialize(Archive & ar, const unsigned int version)
@@ -39,6 +40,7 @@ public:
   /* alpha: reflection coeff
      beta:  contraction coeff
      gamma: expansion coeff*/
+  void persist(const std::string persist_file2);
 
 private:
 

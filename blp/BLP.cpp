@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cmath>
+#include <fstream>
 #include <iostream>
 #include <limits>
 #include <numeric>
@@ -14,7 +15,8 @@ namespace ublas = boost::numeric::ublas;
 
 BLP::BLP(const std::vector<double> init_guess, const double min_share_, const\
 	 double contract_tol_, const double penalty_param1_, const unsigned\
-	 penalty_param2_, const double init_tetra_size)
+	 penalty_param2_, const double init_tetra_size1, const double\
+	 init_tetra_size2)
 {
   min_share = min_share_;
   contract_tol = contract_tol_;
@@ -34,7 +36,11 @@ BLP::BLP(const std::vector<double> init_guess, const double min_share_, const\
       if (i == 0 || j != i) {
 	P[i][j] = init_guess[j];
       } else {
-	P[i][j] = init_guess[j] + init_tetra_size;
+	if (i < params_nbr-3) {
+	  P[i][j] = init_guess[j] + init_tetra_size1;
+	} else {
+	  P[i][j] = init_guess[j] + init_tetra_size2;
+	}
       }	
     }
   }
@@ -71,6 +77,8 @@ void BLP::allocate()
 void BLP::calc_objective(unsigned iter_nbr, unsigned pt)
 {
   // initialization
+  std::fill(xi0[pt].data().begin(), xi0[pt].data().end(), 0.);
+  bool xi_nan = false;
   // observe s_obs = s_obs_wg * pop_ave * mu (s_obs_wg is within group share)
   for (unsigned i = 0; i < N; ++i) {
     ln_s_obs[pt][i] = std::max(std::log(s_obs_wg[i] * (pop_ave[i] / 1e6) *\
@@ -83,22 +91,28 @@ void BLP::calc_objective(unsigned iter_nbr, unsigned pt)
 			       std::numeric_limits<double>::lowest());
     */
   }
+  
 
   /// Berry's Contraction 
   bool conv_check = 0;
   while (!conv_check) {
     for (unsigned i = 0; i < N; ++i) {
-      xi1[pt][i] = xi0[pt][i] + ln_s_obs[pt][i] - std::log(s_calc[pt][i]);
-      if (std::isnan(xi1[pt][i]))
-	std::cout << i << std::endl;
+      xi1[pt][i] = xi0[pt][i] + P[pt][13] * (ln_s_obs[pt][i] -\
+					     std::log(s_calc[pt][i]));
+      if (std::isnan(xi1[pt][i])) {
+	xi_nan = true;
+	break;
+      }
+      //std::cout << i << std::endl;
       /*DEBUG previous version
       if (ln_s_obs[pt][i] == std::numeric_limits<double>::lowest()) {
         xi1[pt][i] = std::numeric_limits<double>::lowest();
       } else {
+        //no lambda
+        xi1[pt][i] = xi0[pt][i] + ln_s_obs[pt][i] - std::log(s_calc[pt][i]);
 	// lambda version (BJ10)
 	//xi1[pt][i] = xi0[pt][i] + P[pt][13] * (ln_s_obs[pt][i] -\
 	//std::log(s_calc[pt][i])); 
-        xi1[pt][i] = xi0[pt][i] + ln_s_obs[pt][i] - std::log(s_calc[pt][i]);
 	//DEBUG
 	std::cout << P[pt][13] << '\r' << std::flush;
         ENDDEBUG
@@ -107,6 +121,8 @@ void BLP::calc_objective(unsigned iter_nbr, unsigned pt)
     }
 
     // check for convergence
+    if (xi_nan)
+      break;
     for (unsigned i = 0; i <= N; ++i) {
       if (i == N) {
         conv_check = 1;
@@ -187,55 +203,59 @@ void BLP::calc_objective(unsigned iter_nbr, unsigned pt)
 
   /// Compute objective function
 
-  // adjust xi for numerical limits
+  /* adjust xi for numerical limits
   double lwr_bound = std::numeric_limits<double>::lowest() / 1e300;
   for (unsigned i = 0; i < N; ++i) {
     if (xi0[pt][i] < lwr_bound)
       xi0[pt][i] = lwr_bound;
+      }*/
+  if (xi_nan) {
+    y[pt] = std::numeric_limits<double>::max();
+  } else {
+    // y = (1/N xi'Z)I(1/N Z'xi)
+    ublas::identity_matrix<double> I (Z.size2());
+    y[pt] = ublas::inner_prod(ublas::prod(1./N *\
+    					ublas::prod(ublas::trans(xi0[pt]),\
+    						    Z), I), 1./N *\
+    			    ublas::prod(ublas::trans(Z), xi0[pt]));
+    
+    /* Add penalty for constraints violation (gamma or lambda not in [0,1], or \
+       mu < 0) */
+    double penalty = {0.};
+    if (P[pt][12] < 0.) {
+      penalty += std::pow(1 + P[pt][12], penalty_param2);
+    } else if (P[pt][12] > 1.) {
+      penalty += std::pow(P[pt][12], penalty_param2);
+    } else if (P[pt][13] < 0.) {
+      penalty += std::pow(1 + P[pt][13], penalty_param2);
+    } else if (P[pt][13] > 1.) {
+      penalty += std::pow(P[pt][13], penalty_param2);
+    } else if (P[pt][14] < 0.) {
+      penalty += std::pow(1 + P[pt][14], penalty_param2);
+    }
+    penalty *= penalty_param1 * iter_nbr;
+    y[pt] += penalty;
+    if (std::isnan(y[pt]))
+      y[pt] = std::numeric_limits<double>::max();
   }
-
-  // y = (1/N xi'Z)I(1/N Z'xi)
-  ublas::identity_matrix<double> I (Z.size2());
-  y[pt] = ublas::inner_prod(ublas::prod(1./N *\
-					ublas::prod(ublas::trans(xi0[pt]),\
-						    Z), I), 1./N *\
-			    ublas::prod(ublas::trans(Z), xi0[pt]));
-
-  /* Add penalty for constraints violation (gamma or lambda not in [0,1], or \
-     mu < 0) */
-  double penalty = {0.};
-  if (P[pt][12] < 0.) {
-    penalty += std::pow(1 + P[pt][12], penalty_param2);
-  } else if (P[pt][12] > 1.) {
-    penalty += std::pow(P[pt][12], penalty_param2);
-  } else if (P[pt][13] < 0.) {
-    penalty += std::pow(1 + P[pt][13], penalty_param2);
-  } else if (P[pt][13] > 1.) {
-    penalty += std::pow(P[pt][13], penalty_param2);
-  } else if (P[pt][14] < 0.) {
-    penalty += std::pow(1 + P[pt][14], penalty_param2);
-  }
-  penalty *= penalty_param1 * iter_nbr;
-  y[pt] += penalty;
-
 }
 
 bool BLP::halt_check(const double NM_tol, unsigned iter_nbr)
 {
-  double y_sum = std::accumulate(y.begin(), y.end(), 0.);
-  double y_avg = y_sum / y.size();
+  double y_sum = std::accumulate(y.begin(), y.begin()+params_nbr+1, 0.);
+  double y_avg = y_sum / (params_nbr+1);
   double y_std = 0.;
-  for (auto& y_elem : y) {
-    y_std += std::pow(y_elem - y_avg, 2);
+  for (unsigned i = 0; i < params_nbr+1; ++i) {
+    y_std += std::pow(y[i] - y_avg, 2);
   }
-  y_std = y_std / y.size();
-  std::cout << y_std << '\t' << "# of iterations: " << iter_nbr << '\r' <<\
-    std::endl;
+  y_std = y_std / (params_nbr+1);
+  std::cout << "y_avg: " << y_avg << " y_std: " << y_std << '\t' <<\
+    "# of iterations: " << iter_nbr << '\r' << std::flush;
   /*DEBUG
   std::cout << P[1][0] << '\t' << P[1][1] << '\t' << P[1][2] << '\t' <<\
             P[1][3] << '\r' << std::flush;
   ENDDEBUG*/
-  if (y_std < NM_tol) {
+  if (y_std < NM_tol && y_avg < std::numeric_limits<double>::max()/2) {
     return true;
   } else {
     return false;
@@ -251,17 +271,17 @@ void BLP::nelder_mead(unsigned iter_nbr, const double alpha, const double beta,\
 
   // Basic functions
   auto get_h = [&] () {
-		   std::vector<double>::iterator y_high;
-		   y_high = std::max_element(y.begin(), y.end());
-		   h = std::distance(y.begin(), y_high);
-		   return h;
-		 };
+		 std::vector<double>::iterator y_high;
+		 y_high = std::max_element(y.begin(), y.begin()+params_nbr+1);
+		 h = std::distance(y.begin(), y_high);
+		 return h;
+	       };
   auto get_l = [&] () {
-		   std::vector<double>::iterator y_low;
-		   y_low = std::min_element(y.begin(), y.end());
-		   l = std::distance(y.begin(), y_low);
-		   return l;
-		 };
+		 std::vector<double>::iterator y_low;
+		 y_low = std::min_element(y.begin(), y.begin()+params_nbr+1);
+		 l = std::distance(y.begin(), y_low);
+		 return l;
+	       };
   auto P_bar = [&] () {
 		 for (unsigned i = 0; i < params_nbr+1; ++i) {
 		   if (i != h)
@@ -271,22 +291,23 @@ void BLP::nelder_mead(unsigned iter_nbr, const double alpha, const double beta,\
 		 return;
 	       };
   auto reflection = [&] () {
-		   P[params_nbr+2] = (1 + alpha) * P[params_nbr+1] - alpha *\
-		     P[h];
-		   this->calc_objective(iter_nbr, params_nbr+2);
-		   return;
-		 };
+		      P[params_nbr+2] = (1 + alpha) * P[params_nbr+1] - alpha *\
+			P[h];
+		      this->calc_objective(iter_nbr, params_nbr+2);
+		      return;
+		    };
   auto expansion = [&] () {
-		  P[params_nbr+3] = gamma * P[params_nbr+2] + (1 - gamma) *\
-		    P[params_nbr+1];
-		  this->calc_objective(iter_nbr, params_nbr+3);
-		  return;
-		};
+		     P[params_nbr+3] = gamma * P[params_nbr+2] + (1 - gamma) *\
+		       P[params_nbr+1];
+		     this->calc_objective(iter_nbr, params_nbr+3);
+		     return;
+		   };
   auto contraction = [&] () {
-		  P[params_nbr+3] = beta * P[h] + (1 - beta) * P[params_nbr+1];
-		  this->calc_objective(iter_nbr, params_nbr+3);
-		  return;
-		};
+		       P[params_nbr+3] = beta * P[h] + (1 - beta) *\
+			 P[params_nbr+1];
+		       this->calc_objective(iter_nbr, params_nbr+3);
+		       return;
+		     };
   /* where P^bar = P[params_nbr+1],
      P* = P[params_nbr+2],
      P** = P[params_nbr+3] */
@@ -338,4 +359,18 @@ void BLP::nelder_mead(unsigned iter_nbr, const double alpha, const double beta,\
       P[h] = P[params_nbr+2]; // Ph = P*
     }
   }
+}
+
+void BLP::persist(const std::string persist_file2)
+{
+  std::ofstream fdesc;
+  fdesc.open(persist_file2);
+  assert(fdesc.is_open());
+  for (unsigned i = 0; i < params_nbr; ++i) {
+    fdesc << "P" << i << ": " << P[0][i] << '\n';
+  }
+  fdesc << "y: " << y[0];
+  fdesc.close();
+  std::cout << "Finished params persistance in file " << persist_file2 <<\
+    std::endl;
 }

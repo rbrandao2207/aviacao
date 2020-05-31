@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
 
   // estimation periods - enter all periods in tuple
   const std::vector<std::string> dates = {"201801", "201802", "201803"};
-  const std::string run_id = "01";
+  const std::string run_id = "02";
 
   // price bins
   // run 01: const std::valarray<double> bins = {0, 200, 400, 600, 800, 1000, 1e5};
@@ -43,25 +43,27 @@ int main(int argc, char* argv[])
   // results directory
   const std::string results_dir = "results/";
   const std::string persist_file = results_dir + "arrays/" + run_id;
-
+  const std::string persist_file2 = results_dir + "est_params/" + run_id;
+  
   /// Estimation params:
   // initial guess ((alpha, beta)_r, gamma, lambda, mu)
   const std::vector<double> init_guess = {.1, .1, .1, .1, .1, .1, .1, .1, .1, .1,\
 					  .1, .1, .5, .8, .01};
   // minimum 'observed shares' for numerical feasibility
-  const double min_share = {1e-8};
+  const double min_share = {1e-20};
   // BLP contraction tolerance
-  const double contract_tol = {1e-6};
+  const double contract_tol = {1e-10};
   // constrained optimization penalty
   const double penalty_param1 = {1e6};
   const unsigned penalty_param2 = {4}; // (must be even)
   // initial tetrahedron "size" for Nelder Mead procedure
-  const double init_tetra_size = {.1};
+  const double init_tetra_size1 = {3};
+  const double init_tetra_size2 = {.1}; // for constrained params (last 3)
   // NM coefficients
-  const double NM_tol = {.5}; // halt parameter
-  const double alpha = {.2}; // reflection, alpha > 0
-  const double beta = {.1}; // contraction, beta in [0,1]
-  const double gamma = {1.2}; // expansion, gamma > 1
+  const double NM_tol = {1e-8}; // halt parameter
+  const double alpha = {1e-6}; // reflection, alpha > 0
+  const double beta = {1e-6}; // contraction, beta in [0,1]
+  const double gamma = {1+1e-6}; // expansion, gamma > 1
   
   /* END OF PARAMETERS */
 
@@ -84,7 +86,7 @@ int main(int argc, char* argv[])
 
     // instantiate
     BLP inst_BLP(init_guess, min_share, contract_tol, penalty_param1,\
-		 penalty_param2, init_tetra_size);
+		 penalty_param2, init_tetra_size1, init_tetra_size2);
     
     // deserialize
     {
@@ -118,6 +120,7 @@ int main(int argc, char* argv[])
       inst_BLP.nelder_mead(iter_nbr, alpha, beta, gamma, points);
       ++iter_nbr;
     }
+    inst_BLP.persist(persist_file2);
 
   } else {
     std::cout << "Invalid args!" << std::endl;
