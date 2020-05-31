@@ -369,7 +369,7 @@ void BLP::persist(const std::string persist_file2)
   for (unsigned i = 0; i < params_nbr; ++i) {
     fdesc << "P" << i << ": " << P[0][i] << '\n';
   }
-  fdesc << "y: " << y[0];
+  fdesc << "y: " << y[0] << '\n';
   fdesc.close();
   std::cout << "Finished params persistance in file " << persist_file2 <<\
     std::endl;

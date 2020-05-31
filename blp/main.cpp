@@ -28,17 +28,23 @@ int main(int argc, char* argv[])
 
   // estimation periods - enter all periods in tuple
   const std::vector<std::string> dates = {"201801", "201802", "201803"};
-  const std::string run_id = "02";
+  const std::string run_id = "pop5e5";
 
   // price bins
-  // run 01: const std::valarray<double> bins = {0, 200, 400, 600, 800, 1000, 1e5};
-  // genarrays run 02:
-  const std::valarray<double> bins = {0, 200, 400, 600, 800, 1e3, 2e3, 3e3, 1e4};
+  /* run 01: const std::valarray<double> bins = {0, 200, 400, 600, 800, 1e3, \
+                                                 1e5};
+  // run 02/03: const std::valarray<double> bins = {0, 200, 400, 600, 800, 1e3,\
+                                                    2e3, 3e3, 1e4}; */
+  // genarrays run 02 & 03:
+  const std::valarray<double> bins = {0, 200, 400, 600, 800, 1e3, 1.5e3, 2e3,\
+				      3e3, 5e5, 1e4};
 
   // population threshold
   // run 01: const unsigned pop_thres = 1e6;
-  // genarrays run 02:
-  const unsigned pop_thres = 2.5e5;
+  // run 02: const unsigned pop_thres = 2.5e5;
+  // run 03: const unsigned pop_thres = 7.5e5;
+  // genarrays run 04:
+  const unsigned pop_thres = 5e5;
 
   // results directory
   const std::string results_dir = "results/";
@@ -47,8 +53,10 @@ int main(int argc, char* argv[])
   
   /// Estimation params:
   // initial guess ((alpha, beta)_r, gamma, lambda, mu)
-  const std::vector<double> init_guess = {.1, .1, .1, .1, .1, .1, .1, .1, .1, .1,\
-					  .1, .1, .5, .8, .01};
+  const std::vector<double> init_guess = {.1, .1, .1, .1, .1, .1, .1, .1, .1, .1, \
+     .1, .1, .5, .8, .01};
+    /* const std::vector<double> init_guess = {.1, .1, .1, .1, .1, 1.6, 0.85, .1, .1, .1, \
+       .1, .1, .5, .8, .035}; */
   // minimum 'observed shares' for numerical feasibility
   const double min_share = {1e-20};
   // BLP contraction tolerance
@@ -57,13 +65,13 @@ int main(int argc, char* argv[])
   const double penalty_param1 = {1e6};
   const unsigned penalty_param2 = {4}; // (must be even)
   // initial tetrahedron "size" for Nelder Mead procedure
-  const double init_tetra_size1 = {3};
+  const double init_tetra_size1 = {.5};
   const double init_tetra_size2 = {.1}; // for constrained params (last 3)
   // NM coefficients
-  const double NM_tol = {1e-8}; // halt parameter
-  const double alpha = {1e-6}; // reflection, alpha > 0
-  const double beta = {1e-6}; // contraction, beta in [0,1]
-  const double gamma = {1+1e-6}; // expansion, gamma > 1
+  const double NM_tol = {1e-15}; // halt parameter
+  const double alpha = {1e-8}; // reflection, alpha > 0
+  const double beta = {1e-8}; // contraction, beta in [0,1]
+  const double gamma = {1+1e-8}; // expansion, gamma > 1
   
   /* END OF PARAMETERS */
 
@@ -94,6 +102,7 @@ int main(int argc, char* argv[])
         assert(ifs.is_open());
         boost::archive::text_iarchive ia(ifs);
         ia >> inst_BLP;
+	ifs.close();
     }
     inst_BLP.allocate();
     
@@ -121,6 +130,7 @@ int main(int argc, char* argv[])
       ++iter_nbr;
     }
     inst_BLP.persist(persist_file2);
+    std::cout << "# of iterations: " << iter_nbr << std::endl;
 
   } else {
     std::cout << "Invalid args!" << std::endl;
