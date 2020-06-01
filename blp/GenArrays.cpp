@@ -57,16 +57,17 @@ GenArrays::GenArrays(const std::vector<std::string> dates_, \
                         <std::string>() + "';";
                 pqxx::result R_companies(N.exec(companies_query));
                 if (R_companies.size() > 1) {
-                    unsigned counter_companies = 0;
                     for (auto c4 = R_companies.begin(); c4 != \
                             R_companies.end(); ++c4) {
                         for (double i = 0; i < bins.size() - 1; ++i) {
-                            products.push_back(std::make_tuple(c2[0].as\
-                                    <std::string>(), c2[1].as<std::string>(), \
-                                    c4[0].as<std::string>(), bins[i], bins\
-                                    [i+1], counter_companies, counter_dates));
+                            products.push_back(std::make_tuple\
+					       (c2[0].as<std::string>(),\
+						c2[1].as<std::string>(),\
+						c4[0].as<std::string>(),\
+						bins[i], bins[i+1],\
+						R_companies.size(),\
+						counter_dates));
                         }
-                        ++counter_companies;
                     }
                 }
             }
@@ -113,9 +114,9 @@ void GenArrays::gen_arrays()
     mkt_id.resize(products.size());
     std::fill(s_obs_wg.data().begin(), s_obs_wg.data().end(), 0.0);
     pop_ave.resize(products.size());
-    X.resize(products.size(), 6);
+    X.resize(products.size(), 10);
     // Z matrix w/ 1 instrument, just-identified
-    Z.resize(products.size(), 6);
+    Z.resize(products.size(), 10);
 
     // connect to database
     pqxx::connection C("dbname = aviacao user = postgres password = passwd"\
@@ -174,11 +175,43 @@ void GenArrays::gen_arrays()
                 Z(i, 2) = c2[1].as<double>() / 1000;		
                 X(i, 3) = pow(c2[1].as<double>() / 1000, 2);
 		Z(i, 3) = pow(c2[1].as<double>() / 1000, 2);
-                X(i, 4) = std::get<5>(products[i]);
-		Z(i, 4) = std::get<5>(products[i]);
-                X(i, 5) = std::get<6>(products[i]);
-		Z(i, 5) = std::get<6>(products[i]);
-
+		if (std::get<2>(products[i]) == "AZU") {
+		  X(i, 4) = 0.; Z(i, 4) = 0.;
+		  X(i, 5) = 0.; Z(i, 5) = 0.;
+		  X(i, 6) = 0.; Z(i, 6) = 0.;
+		  X(i, 7) = 0.; Z(i, 7) = 0.;
+		} else if (std::get<2>(products[i]) == "TAM") {
+		  X(i, 4) = 1.; Z(i, 4) = 1.;
+		  X(i, 5) = 0.;	Z(i, 5) = 0.;
+		  X(i, 6) = 0.;	Z(i, 6) = 0.;
+		  X(i, 7) = 0.;	Z(i, 7) = 0.;
+		} else if (std::get<2>(products[i]) == "GLO") {
+		  X(i, 4) = 0.; Z(i, 4) = 0.;
+		  X(i, 5) = 1.;	Z(i, 5) = 1.;
+		  X(i, 6) = 0.;	Z(i, 6) = 0.;
+		  X(i, 7) = 0.;	Z(i, 7) = 0.;
+		} else if (std::get<2>(products[i]) == "ONE") {
+		  X(i, 4) = 0.; Z(i, 4) = 0.;
+		  X(i, 5) = 0.;	Z(i, 5) = 0.;
+		  X(i, 6) = 1.;	Z(i, 6) = 1.;
+		  X(i, 7) = 0.;	Z(i, 7) = 0.;
+		} else {
+		  X(i, 4) = 0.; Z(i, 4) = 0.;
+		  X(i, 5) = 0.;	Z(i, 5) = 0.;
+		  X(i, 6) = 0.;	Z(i, 6) = 0.;
+		  X(i, 7) = 1.;	Z(i, 7) = 1.;
+		}
+		if (std::get<6>(products[i]) == 0) {
+		  X(i, 8) = 0.; Z(i, 8) = 0.;
+		  X(i, 9) = 0.; Z(i, 9) = 0.;
+		} else if (std::get<6>(products[i]) == 1) {
+		  X(i, 8) = 1.; Z(i, 8) = 1.;
+		  X(i, 9) = 0.; Z(i, 9) = 0.;
+		} else if (std::get<6>(products[i]) == 2) {
+		  X(i, 8) = 0.; Z(i, 8) = 0.;
+		  X(i, 9) = 1.; Z(i, 9) = 1.;
+		}
+		
                 ++i;
             } else {
                 for (unsigned x = initial_aux_i; x <= i; ++x) {

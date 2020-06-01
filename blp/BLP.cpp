@@ -26,8 +26,8 @@ BLP::BLP(const std::vector<double> init_guess, const double min_share_, const\
   ublas::vector<double> auxP;
   auxP.resize(params_nbr);
   for (unsigned i = 0; i < params_nbr+4; ++i) {
-    P.push_back(auxP); /* init P0, ..., Pn+1 (=P[15], where params_nbr=15),
-                          P^bar (P[params_nbr+1]), P* (...+2), P** (...+3) */ 
+    P.push_back(auxP); /* init P0, ..., Pn+1, +
+                          P^bar (P[params_nbr+1]), P* (...+2), P** (...+3) */
     y.push_back(0.); // init y
   }
   // initialize P's, P[0] at center
@@ -82,14 +82,9 @@ void BLP::calc_objective(unsigned iter_nbr, unsigned pt)
   // observe s_obs = s_obs_wg * pop_ave * mu (s_obs_wg is within group share)
   for (unsigned i = 0; i < N; ++i) {
     ln_s_obs[pt][i] = std::max(std::log(s_obs_wg[i] * (pop_ave[i] / 1e6) *\
-					P[pt][14]), std::log(min_share *\
+					P[pt][22]), std::log(min_share *\
 							     (pop_ave[i] / 1e6)\
-							     * P[pt][14]));
-    /*DEBUG previous version
-    ln_s_obs[pt][i] = std::max(std::log(s_obs_wg[i] * (pop_ave[i] / 1e6) *\
-					P[pt][14]),\
-			       std::numeric_limits<double>::lowest());
-    */
+							     * P[pt][22]));
   }
   
 
@@ -97,29 +92,13 @@ void BLP::calc_objective(unsigned iter_nbr, unsigned pt)
   bool conv_check = 0;
   while (!conv_check) {
     for (unsigned i = 0; i < N; ++i) {
-      xi1[pt][i] = xi0[pt][i] + P[pt][13] * (ln_s_obs[pt][i] -\
+      xi1[pt][i] = xi0[pt][i] + P[pt][21] * (ln_s_obs[pt][i] -\
 					     std::log(s_calc[pt][i]));
       if (std::isnan(xi1[pt][i])) {
 	xi_nan = true;
 	break;
       }
-      //std::cout << i << std::endl;
-      /*DEBUG previous version
-      if (ln_s_obs[pt][i] == std::numeric_limits<double>::lowest()) {
-        xi1[pt][i] = std::numeric_limits<double>::lowest();
-      } else {
-        //no lambda
-        xi1[pt][i] = xi0[pt][i] + ln_s_obs[pt][i] - std::log(s_calc[pt][i]);
-	// lambda version (BJ10)
-	//xi1[pt][i] = xi0[pt][i] + P[pt][13] * (ln_s_obs[pt][i] -\
-	//std::log(s_calc[pt][i])); 
-	//DEBUG
-	std::cout << P[pt][13] << '\r' << std::flush;
-        ENDDEBUG
-      }ENDDEBUG*/
-    
     }
-
     // check for convergence
     if (xi_nan)
       break;
@@ -129,35 +108,27 @@ void BLP::calc_objective(unsigned iter_nbr, unsigned pt)
         break;
       }
       if (std::abs(xi1[pt][i] - xi0[pt][i]) < contract_tol) {
-	/*DEBUG
- 	std::cout << std::abs(xi1[pt][i] - xi0[pt][i]) << '\t' << i << '\t' <<\
-	  pt << ' ' << P[pt][12] << ' ' << P[pt][13] << ' ' << P[pt][14] <<\
-	  '\r' << std::flush;
-	  //ENDDEBUG*/
         continue;
       } else {
-	/*DEBUG
- 	std::cout << std::abs(xi1[pt][i] - xi0[pt][i]) << '\t' << i << '\t' <<\
-	  pt << ' ' << P[pt][12] << ' ' << P[pt][13] << ' ' << P[pt][14] <<\
-	  '\r' << std::endl;
-	  //ENDDEBUG*/
         break;
       }
     }
-
     /// calc shares
-    
     // calc s_ind1 & s_ind2 (exp(Xbeta....))
     // check header file for params mapping to P
     for (unsigned i = 0; i < N; ++i) {
       s_aux1[pt][i] = std::exp((X(i, 0) * P[pt][0] + X(i, 1) * P[pt][1] +\
-  			      X(i, 2) * P[pt][2] + X(i, 3) * P[pt][3] +\
-  			      X(i, 4) * P[pt][4] + X(i, 5) * P[pt][5] +\
-  			      xi1[pt][i]) / P[pt][13]);
-      s_aux2[pt][i] = std::exp((X(i, 0) * P[pt][6] + X(i, 1) * P[pt][7] +\
-  			      X(i, 2) * P[pt][8] + X(i, 3) * P[pt][9] +\
-  			      X(i, 4) * P[pt][10] + X(i, 5) * P[pt][11] +\
-  			      xi1[pt][i]) / P[pt][13]);
+				X(i, 2) * P[pt][2] + X(i, 3) * P[pt][3] +\
+				X(i, 4) * P[pt][4] + X(i, 5) * P[pt][5] +\
+				X(i, 6) * P[pt][6] + X(i, 7) * P[pt][7] +\
+				X(i, 8) * P[pt][8] + X(i, 9) * P[pt][9] +\
+				xi1[pt][i]) / P[pt][21]);
+      s_aux2[pt][i] = std::exp((X(i, 0) * P[pt][10] + X(i, 1) * P[pt][11] +\
+				X(i, 2) * P[pt][12] + X(i, 3) * P[pt][13] +\
+				X(i, 4) * P[pt][14] + X(i, 5) * P[pt][15] +\
+				X(i, 6) * P[pt][16] + X(i, 7) * P[pt][17] +\
+				X(i, 8) * P[pt][18] + X(i, 9) * P[pt][19] +\
+				xi1[pt][i]) / P[pt][21]);
     }
   
     // calc D1 and D2
@@ -189,12 +160,12 @@ void BLP::calc_objective(unsigned iter_nbr, unsigned pt)
   
     // compute model shares
     for (unsigned i = 0; i < N; ++i) {
-      s_calc[pt][i] = P[pt][12] * ((s_aux1[pt][i] / D1[pt][i]) *\
-  				 (std::pow(D1[pt][i], P[pt][13]) /\
-  				  (1 + std::pow(D1[pt][i], P[pt][13])))) +\
-        (1 - P[pt][12]) * ((s_aux2[pt][i] / D2[pt][i]) *\
-  			 (std::pow(D2[pt][i], P[pt][13]) /\
-  			  (1 + std::pow(D2[pt][i], P[pt][13]))));
+      s_calc[pt][i] = P[pt][20] * ((s_aux1[pt][i] / D1[pt][i]) *\
+  				 (std::pow(D1[pt][i], P[pt][21]) /\
+  				  (1 + std::pow(D1[pt][i], P[pt][21])))) +\
+        (1 - P[pt][20]) * ((s_aux2[pt][i] / D2[pt][i]) *\
+  			 (std::pow(D2[pt][i], P[pt][21]) /\
+  			  (1 + std::pow(D2[pt][i], P[pt][21]))));
     }
 
     // Update unobs util
@@ -202,13 +173,6 @@ void BLP::calc_objective(unsigned iter_nbr, unsigned pt)
   }
 
   /// Compute objective function
-
-  /* adjust xi for numerical limits
-  double lwr_bound = std::numeric_limits<double>::lowest() / 1e300;
-  for (unsigned i = 0; i < N; ++i) {
-    if (xi0[pt][i] < lwr_bound)
-      xi0[pt][i] = lwr_bound;
-      }*/
   if (xi_nan) {
     y[pt] = std::numeric_limits<double>::max();
   } else {
@@ -222,16 +186,16 @@ void BLP::calc_objective(unsigned iter_nbr, unsigned pt)
     /* Add penalty for constraints violation (gamma or lambda not in [0,1], or \
        mu < 0) */
     double penalty = {0.};
-    if (P[pt][12] < 0.) {
-      penalty += std::pow(1 + P[pt][12], penalty_param2);
-    } else if (P[pt][12] > 1.) {
-      penalty += std::pow(P[pt][12], penalty_param2);
-    } else if (P[pt][13] < 0.) {
-      penalty += std::pow(1 + P[pt][13], penalty_param2);
-    } else if (P[pt][13] > 1.) {
-      penalty += std::pow(P[pt][13], penalty_param2);
-    } else if (P[pt][14] < 0.) {
-      penalty += std::pow(1 + P[pt][14], penalty_param2);
+    if (P[pt][20] < 0.) {
+      penalty += std::pow(1 + P[pt][20], penalty_param2);
+    } else if (P[pt][20] > 1.) {
+      penalty += std::pow(P[pt][20], penalty_param2);
+    } else if (P[pt][21] < 0.) {
+      penalty += std::pow(1 + P[pt][21], penalty_param2);
+    } else if (P[pt][21] > 1.) {
+      penalty += std::pow(P[pt][21], penalty_param2);
+    } else if (P[pt][22] < 0.) {
+      penalty += std::pow(1 + P[pt][22], penalty_param2);
     }
     penalty *= penalty_param1 * iter_nbr;
     y[pt] += penalty;
@@ -251,10 +215,6 @@ bool BLP::halt_check(const double NM_tol, unsigned iter_nbr)
   y_std = y_std / (params_nbr+1);
   std::cout << "y_avg: " << y_avg << " y_std: " << y_std << '\t' <<\
     "# of iterations: " << iter_nbr << '\r' << std::flush;
-  /*DEBUG
-  std::cout << P[1][0] << '\t' << P[1][1] << '\t' << P[1][2] << '\t' <<\
-            P[1][3] << '\r' << std::flush;
-  ENDDEBUG*/
   if (y_std < NM_tol && y_avg < std::numeric_limits<double>::max()/2) {
     return true;
   } else {

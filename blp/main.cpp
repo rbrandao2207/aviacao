@@ -26,24 +26,17 @@ int main(int argc, char* argv[])
 
   /* PARAMETERS */
 
-  // estimation periods - enter all periods in tuple
+  // estimation periods - currently quarters only
   const std::vector<std::string> dates = {"201801", "201802", "201803"};
-  const std::string run_id = "pop5e5";
+  // run identifier
+  const std::string run_id = "2018Q1";
 
   // price bins
-  /* run 01: const std::valarray<double> bins = {0, 200, 400, 600, 800, 1e3, \
-                                                 1e5};
-  // run 02/03: const std::valarray<double> bins = {0, 200, 400, 600, 800, 1e3,\
-                                                    2e3, 3e3, 1e4}; */
-  // genarrays run 02 & 03:
-  const std::valarray<double> bins = {0, 200, 400, 600, 800, 1e3, 1.5e3, 2e3,\
-				      3e3, 5e5, 1e4};
+  const std::valarray<double> bins = {0, 100, 200, 300, 400, 500, 600, 700, 800,\
+				      900, 1e3, 1.25e3, 1.5e3, 1.75e3, 2e3, 3e3,\
+				      5e5};
 
   // population threshold
-  // run 01: const unsigned pop_thres = 1e6;
-  // run 02: const unsigned pop_thres = 2.5e5;
-  // run 03: const unsigned pop_thres = 7.5e5;
-  // genarrays run 04:
   const unsigned pop_thres = 5e5;
 
   // results directory
@@ -53,14 +46,13 @@ int main(int argc, char* argv[])
   
   /// Estimation params:
   // initial guess ((alpha, beta)_r, gamma, lambda, mu)
-  const std::vector<double> init_guess = {.1, .1, .1, .1, .1, .1, .1, .1, .1, .1, \
-     .1, .1, .5, .8, .01};
-    /* const std::vector<double> init_guess = {.1, .1, .1, .1, .1, 1.6, 0.85, .1, .1, .1, \
-       .1, .1, .5, .8, .035}; */
+  const std::vector<double> init_guess = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0,\ //type1
+					  0, 0, 0, 0, 0, 0, 0, 0, 0, 0,\ //type2
+					  .5, .8, .1}; // gamma, lambda, mu
   // minimum 'observed shares' for numerical feasibility
   const double min_share = {1e-20};
   // BLP contraction tolerance
-  const double contract_tol = {1e-10};
+  const double contract_tol = {1e-12};
   // constrained optimization penalty
   const double penalty_param1 = {1e6};
   const unsigned penalty_param2 = {4}; // (must be even)

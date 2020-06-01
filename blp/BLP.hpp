@@ -59,23 +59,32 @@ private:
                          1 fare (bin center R$/1000)
                          2 distance (km / 1000)
                          3 distance^2
-                         4 carrier dummy
-                         5 time dummy */
+                         4 dummy TAM
+                         5 dummy GLO
+                         6 dummy ONE
+                         7 dummy other (base AZU)
+                         8 time dummy second period
+                         9 time dummy third period */
   ublas::matrix<double> Z;
   /* Z matrix structure: 0 constant
                          1 aviation fuel price (querosene, instrument)
                          2 distance (km / 1000)
                          3 distance^2
-                         4 carrier dummy
-                         5 time dummy */
-
+                         4 dummy TAM
+                         5 dummy GLO
+                         6 dummy ONE
+                         7 dummy other (base AZU)
+                         8 time dummy second period
+                         9 time dummy third period */
 
   std::vector<ublas::vector<double>> P;
-  /* Params are 15 total:
-     0: beta1_0, 1: beta1_1, 2: beta1_2, 3: beta1_3, 4: beta1_4, 5: beta1_5;
-     6: beta2_0, 7: beta2_1, 8: beta2_2, 9: beta2_3, 10: beta2_4, 11: beta2_5;
-     12: gamma, 13: lambda, 14: mu 
-     NM procedures takes number of params + 1 = 16 P's, + 
+  /* Params are 23 total:
+     0: beta1_0, 1: beta1_1, 2: beta1_2, 3: beta1_3, 4: beta1_4, 5: beta1_5,
+     6: beta1_6, 7: beta1_7, 8: beta1_8, 9: beta1_9;
+     10: beta2_0, 11: beta2_1, 12: beta2_2, 13: beta2_3, 14: beta2_4,
+     15: beta2_5; 16: beta2_6, 17: beta2_7, 18: beta2_8, 19: beta2_9;
+     20: gamma, 21: lambda, 22: mu 
+     NM procedures takes number of params + 1 = 24 P's, + 
        P^bar (params_nbr+1), P* (params_nbr+2) and P** (params_nbr+3) */
 
   // Objective function values
