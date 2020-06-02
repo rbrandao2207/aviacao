@@ -46,9 +46,9 @@ int main(int argc, char* argv[])
   
   /// Estimation params:
   // initial guess ((alpha, beta)_r, gamma, lambda, mu)
-  const std::vector<double> init_guess = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0,\ //type1
-					  0, 0, 0, 0, 0, 0, 0, 0, 0, 0,\ //type2
-					  .5, .8, .1}; // gamma, lambda, mu
+  const std::vector<double> init_guess = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0,\
+					  0, 0, 0, 0, 0, 0, 0, 0, 0, 0,\
+					  .5, .8, .1};
   // minimum 'observed shares' for numerical feasibility
   const double min_share = {1e-20};
   // BLP contraction tolerance
