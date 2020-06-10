@@ -13,12 +13,12 @@ namespace ublas = boost::numeric::ublas;
 
 class BLP
 {
+
 public:
-  
   BLP(const std::vector<double> init_guess, const double min_share_, const\
       double contract_tol_, const double penalty_param1_, const unsigned\
       penalty_param2_, const double init_tetra_size1, const double\
-      init_tetra_size2);
+      init_tetra_size2, unsigned const max_threads=16);
 
   template<class Archive>
   void serialize(Archive & ar, const unsigned int version)
@@ -29,10 +29,10 @@ public:
     ar & X;
     ar & Z;
   }
-
   unsigned params_nbr;
-
+  unsigned num_threads;
   void allocate();
+  void calc_objective_npar(unsigned iter_nbr, unsigned pt);
   void calc_objective(unsigned iter_nbr, unsigned pt);
   bool halt_check(const double NM_tol, unsigned iter_nbr);
   void nelder_mead(unsigned iter_nbr, const double alpha, const double beta,\
@@ -43,7 +43,6 @@ public:
   void persist(const std::string persist_file2);
 
 private:
-
   // Params
   double min_share;
   double contract_tol;
@@ -90,8 +89,7 @@ private:
   // Objective function values
   std::vector<double> y;
   
-  // Calc vars
-
+  /// Calc vars
   // unobserved utility
   std::vector<ublas::vector<double>> xi0;
   std::vector<ublas::vector<double>> xi1;

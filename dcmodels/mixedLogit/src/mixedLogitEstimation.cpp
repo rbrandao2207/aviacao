@@ -52,7 +52,7 @@ LogitEstimation::LogitEstimation(pqxx::nontransaction& N, std::string const& tbl
     P.resize(arr_sizes[0]);
     aux_P.resize(arr_sizes[0]);
 
-    // initialize beta, allocat aux_beta
+    // initialize beta, allocate aux_beta
     beta.resize(arr_sizes[1]);
     beta(0) = .1;
     for (auto i = 1; i != arr_sizes[1]; ++i)
