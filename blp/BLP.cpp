@@ -47,7 +47,7 @@ BLP::BLP(const std::vector<double> init_guess, const double min_share_, const\
   }
   // init parallel params
   unsigned hardware_threads = std::thread::hardware_concurrency();
-  num_threads = std::min(hardware_threads != 0 ? hardware_threads : 2,
+  num_threads = std::min(hardware_threads != 0 ? hardware_threads : 1,\
 			 max_threads);
 }
 
@@ -214,6 +214,7 @@ void BLP::calc_objective(unsigned iter_nbr, unsigned pt)
   bool xi_nan = false;
   std::vector<std::thread> threads;
   unsigned j, k, block_size;
+  block_size = N / num_threads;
   // observe s_obs = s_obs_wg * pop_ave * mu (s_obs_wg is within group share)
   auto ln_s_obs_L = [&] (unsigned begin, unsigned end) {
 		      for (unsigned i = begin; i < end; ++i) {
@@ -226,7 +227,6 @@ void BLP::calc_objective(unsigned iter_nbr, unsigned pt)
 		    }
 		  };
   j = 0;
-  block_size = N / num_threads;
   for (unsigned i = 0; i < (num_threads - 1); ++i) {
     k = j + block_size;
     threads.push_back(std::thread(ln_s_obs_L, j, k));
@@ -240,13 +240,27 @@ void BLP::calc_objective(unsigned iter_nbr, unsigned pt)
   /// Berry's Contraction 
   bool conv_check = 0;
   while (!conv_check) {
-    for (unsigned i = 0; i < N; ++i) {
-      xi1[pt][i] = xi0[pt][i] + P[pt][21] * (ln_s_obs[pt][i] -\
+
+    auto xi1_L = [&] (unsigned begin, unsigned end) {
+		   for (unsigned i = begin; i < end; ++i) {
+		     xi1[pt][i] = xi0[pt][i] + P[pt][21] * (ln_s_obs[pt][i] -\
 					     std::log(s_calc[pt][i]));
-      if (std::isnan(xi1[pt][i])) {
-	xi_nan = true;
-	break;
-      }
+		     if (std::isnan(xi1[pt][i])) {
+		       xi_nan = true;
+		       break;
+		     }
+		   }
+		 };
+    threads.clear();
+    j = 0;
+    for (unsigned i = 0; i < (num_threads - 1); ++i) {
+      k = j + block_size;
+      threads.push_back(std::thread(xi1_L, j, k));
+      j = k;
+    }
+    threads.push_back(std::thread(xi1_L, j, N));
+    for (auto& thread : threads) {
+      thread.join();
     }
     // check for convergence
     if (xi_nan)
@@ -265,21 +279,38 @@ void BLP::calc_objective(unsigned iter_nbr, unsigned pt)
     /// calc shares
     // calc s_ind1 & s_ind2 (exp(Xbeta....))
     // check header file for params mapping to P
-    for (unsigned i = 0; i < N; ++i) {
-      s_aux1[pt][i] = std::exp((X(i, 0) * P[pt][0] + X(i, 1) * P[pt][1] +\
-				X(i, 2) * P[pt][2] + X(i, 3) * P[pt][3] +\
-				X(i, 4) * P[pt][4] + X(i, 5) * P[pt][5] +\
-				X(i, 6) * P[pt][6] + X(i, 7) * P[pt][7] +\
-				X(i, 8) * P[pt][8] + X(i, 9) * P[pt][9] +\
-				xi1[pt][i]) / P[pt][21]);
-      s_aux2[pt][i] = std::exp((X(i, 0) * P[pt][10] + X(i, 1) * P[pt][11] +\
-				X(i, 2) * P[pt][12] + X(i, 3) * P[pt][13] +\
-				X(i, 4) * P[pt][14] + X(i, 5) * P[pt][15] +\
-				X(i, 6) * P[pt][16] + X(i, 7) * P[pt][17] +\
-				X(i, 8) * P[pt][18] + X(i, 9) * P[pt][19] +\
-				xi1[pt][i]) / P[pt][21]);
+    auto s_aux_L = [&] (unsigned begin, unsigned end) {
+		     for (unsigned i = begin; i < end; ++i) {
+		       s_aux1[pt][i] = std::exp((X(i, 0) * P[pt][0] + X(i, 1) *\
+						 P[pt][1] + X(i, 2) * P[pt][2] +\
+						 X(i, 3) * P[pt][3] + X(i, 4) *\
+						 P[pt][4] + X(i, 5) * P[pt][5] +\
+						 X(i, 6) * P[pt][6] + X(i, 7) *\
+						 P[pt][7] + X(i, 8) * P[pt][8] +\
+						 X(i, 9) * P[pt][9] +\
+						 xi1[pt][i]) / P[pt][21]);
+		       s_aux2[pt][i] = std::exp((X(i, 0) * P[pt][10] + X(i, 1) *\
+						 P[pt][11] + X(i, 2) * P[pt][12]\
+						 + X(i, 3) * P[pt][13] + X(i, 4)\
+						 * P[pt][14] + X(i, 5) *\
+						 P[pt][15] + X(i, 6) *\
+						 P[pt][16] + X(i, 7) * P[pt][17]\
+						 + X(i, 8) * P[pt][18] + X(i, 9)\
+						 * P[pt][19] + xi1[pt][i]) /\
+						P[pt][21]);
+		     }
+		   };
+    threads.clear();
+    j = 0;
+    for (unsigned i = 0; i < (num_threads - 1); ++i) {
+      k = j + block_size;
+      threads.push_back(std::thread(s_aux_L, j, k));
+      j = k;
     }
-  
+    threads.push_back(std::thread(s_aux_L, j, N));
+    for (auto& thread : threads) {
+      thread.join();
+    }
     // calc D1 and D2
     double aux_D1 = 0;
     double aux_D2 = 0;
@@ -308,15 +339,31 @@ void BLP::calc_objective(unsigned iter_nbr, unsigned pt)
     }
   
     // compute model shares
-    for (unsigned i = 0; i < N; ++i) {
-      s_calc[pt][i] = P[pt][20] * ((s_aux1[pt][i] / D1[pt][i]) *\
-  				 (std::pow(D1[pt][i], P[pt][21]) /\
-  				  (1 + std::pow(D1[pt][i], P[pt][21])))) +\
-        (1 - P[pt][20]) * ((s_aux2[pt][i] / D2[pt][i]) *\
-  			 (std::pow(D2[pt][i], P[pt][21]) /\
-  			  (1 + std::pow(D2[pt][i], P[pt][21]))));
+    auto s_calc_L = [&] (unsigned begin, unsigned end) {
+		      for (unsigned i = begin; i < end; ++i) {
+			s_calc[pt][i] = P[pt][20] * ((s_aux1[pt][i] / D1[pt][i])\
+						     * (std::pow(D1[pt][i],\
+								 P[pt][21]) /\
+							(1 +\
+							 std::pow(D1[pt][i],\
+								  P[pt][21]))))\
+			  + (1 - P[pt][20]) * ((s_aux2[pt][i] / D2[pt][i]) *\
+					       (std::pow(D2[pt][i], P[pt][21]) /\
+						(1 + std::pow(D2[pt][i],\
+							      P[pt][21]))));
+		      }
+		    };
+    threads.clear();
+    j = 0;
+    for (unsigned i = 0; i < (num_threads - 1); ++i) {
+      k = j + block_size;
+      threads.push_back(std::thread(s_calc_L, j, k));
+      j = k;
     }
-
+    threads.push_back(std::thread(s_calc_L, j, N));
+    for (auto& thread : threads) {
+      thread.join();
+    }
     // Update unobs util
     xi0[pt] = xi1[pt];
   }
