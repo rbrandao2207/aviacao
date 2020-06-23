@@ -417,3 +417,14 @@ void BLP::persist(const std::string persist_file2)
   std::cout << "Finished params persistance in file " << persist_file2 <<\
     std::endl;
 }
+
+void BLP::persist_ig(const std::string initguess_f)
+{
+  std::ofstream fdesc;
+  fdesc.open(initguess_f);
+  assert(fdesc.is_open());
+  for (unsigned i = 0; i < params_nbr; ++i) {
+    fdesc << P[0][i] << '\n';
+  }
+  fdesc.close();
+}

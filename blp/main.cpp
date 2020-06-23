@@ -14,10 +14,12 @@
 #include "GenArrays.hpp"
 
 
-// current run options:
-// 1) argv[1] genarrays
-// 2) argv[1] estimation
-// 3) argv[1] genarrays & argv[2] estimation
+/* current run options:
+   1) argv[1] genarrays
+   2) argv[1] estimation
+   3) argv[1] genarrays, argv[2] estimation
+   4) argv[1] estimation, argv[2] igff (init guess from file)
+   5) argv[1] genarrays, argv[2] estimation, argv[3] igff */
 
 
 int main(int argc, char* argv[])
@@ -43,11 +45,14 @@ int main(int argc, char* argv[])
   const std::string results_dir = "results/";
   const std::string persist_file = results_dir + "arrays/" + run_id;
   const std::string persist_file2 = results_dir + "est_params/" + run_id;
+  const std::string initguess_f = results_dir + "init_guess";
   
   /// Estimation params:
   // initial guess ((alpha, beta)_r, gamma, lambda, mu)
-  const std::vector<double> init_guess = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0,\
-					  0, 0, 0, 0, 0, 0, 0, 0, 0, 0,\
+  std::vector<double> init_guess = {.1, -.1, .1, -.1, .1, .1, .1, .1, .1,\
+					  .1,\
+					  .1, -.1, .1, -.1, .1, .1, .1, .1, .1,\
+					  .1,\
 					  .5, .8, .1};
   // minimum 'observed shares' for numerical feasibility
   const double min_share = {1e-20};
@@ -57,8 +62,8 @@ int main(int argc, char* argv[])
   const double penalty_param1 = {1e6};
   const unsigned penalty_param2 = {4}; // (must be even)
   // initial tetrahedron "size" for Nelder Mead procedure
-  const double init_tetra_size1 = {.5};
-  const double init_tetra_size2 = {.1}; // for constrained params (last 3)
+  const double init_tetra_size1 = {.1};
+  const double init_tetra_size2 = {.05}; // for constrained params (last 3)
   // NM coefficients
   const double NM_tol = {1e-15}; // halt parameter
   const double alpha = {.5}; // reflection, alpha > 0
@@ -80,9 +85,21 @@ int main(int argc, char* argv[])
         oa << inst_GA;
     }
 
-  } else if ((argc > 1 && std::strcmp(argv[1], "estimation") == 0) || \
-	     (argc > 2 && std::strcmp(argv[1], "genarrays") == 0 && \
+  } else if ((argc > 1 && std::strcmp(argv[1], "estimation") == 0) ||\
+	     (argc > 2 && std::strcmp(argv[1], "genarrays") == 0 &&\
 	      std::strcmp(argv[2], "estimation") == 0)) {
+
+    // override init guess from file?
+    if ((argc > 2 && std::strcmp(argv[2], "igff") == 0) ||\
+	(argc > 3 && std::strcmp(argv[3], "igff") == 0)) {
+      init_guess.clear();
+      std::ifstream ifs_ig(initguess_f);
+      std::string aux_line;
+      while (std::getline(ifs_ig, aux_line)) {
+	if (!aux_line.empty())
+	  init_guess.push_back(std::stod(aux_line));
+      }
+    }
 
     // instantiate
     BLP inst_BLP(init_guess, min_share, contract_tol, penalty_param1,\
@@ -120,15 +137,20 @@ int main(int argc, char* argv[])
       // NM procedure
       inst_BLP.nelder_mead(iter_nbr, alpha, beta, gamma, points);
       ++iter_nbr;
+      if (iter_nbr == 10)
+	break;
     }
+    // persist results
     inst_BLP.persist(persist_file2);
     std::cout << "# of iterations: " << iter_nbr << std::endl;
+    // save init guess for other runs
+    std::remove(initguess_f.c_str());
+    inst_BLP.persist_ig(initguess_f);
 
   } else {
     std::cout << "Invalid args!" << std::endl;
     throw std::runtime_error("aborting");
   }
-
 
   // finish chrono
   auto chrono_end = std::chrono::steady_clock::now();

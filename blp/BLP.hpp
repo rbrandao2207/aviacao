@@ -41,6 +41,7 @@ public:
      beta:  contraction coeff
      gamma: expansion coeff*/
   void persist(const std::string persist_file2);
+  void persist_ig(const std::string initguess_f);
 
 private:
   // Params
