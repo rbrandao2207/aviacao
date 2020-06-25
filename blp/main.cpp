@@ -46,6 +46,12 @@ int main(int argc, char* argv[])
   const std::string persist_file = results_dir + "arrays/" + run_id;
   const std::string persist_file2 = results_dir + "est_params/" + run_id;
   const std::string initguess_f = results_dir + "init_guess";
+
+  // initial guess from file, boolean
+  bool igff = false;
+
+  // maximum number of iterations
+  const unsigned max_iter = 1e5;
   
   /// Estimation params:
   // initial guess ((alpha, beta)_r, gamma, lambda, mu)
@@ -92,18 +98,13 @@ int main(int argc, char* argv[])
     // override init guess from file?
     if ((argc > 2 && std::strcmp(argv[2], "igff") == 0) ||\
 	(argc > 3 && std::strcmp(argv[3], "igff") == 0)) {
-      init_guess.clear();
-      std::ifstream ifs_ig(initguess_f);
-      std::string aux_line;
-      while (std::getline(ifs_ig, aux_line)) {
-	if (!aux_line.empty())
-	  init_guess.push_back(std::stod(aux_line));
-      }
+      igff = true;
     }
 
     // instantiate
-    BLP inst_BLP(init_guess, min_share, contract_tol, penalty_param1,\
-		 penalty_param2, init_tetra_size1, init_tetra_size2);
+    BLP inst_BLP(init_guess, initguess_f, igff, min_share, contract_tol,\
+		 penalty_param1, penalty_param2, init_tetra_size1,\
+		 init_tetra_size2);
     
     // deserialize
     {
@@ -137,7 +138,7 @@ int main(int argc, char* argv[])
       // NM procedure
       inst_BLP.nelder_mead(iter_nbr, alpha, beta, gamma, points);
       ++iter_nbr;
-      if (iter_nbr == 10)
+      if (iter_nbr == max_iter)
 	break;
     }
     // persist results

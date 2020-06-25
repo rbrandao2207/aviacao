@@ -4,6 +4,7 @@
 #include <iostream>
 #include <limits>
 #include <numeric>
+#include <stdexcept>
 #include <thread>
 #include <vector>
 
@@ -14,10 +15,11 @@
 namespace ublas = boost::numeric::ublas;
 
 
-BLP::BLP(const std::vector<double> init_guess, const double min_share_, const\
-	 double contract_tol_, const double penalty_param1_, const unsigned\
-	 penalty_param2_, const double init_tetra_size1, const double\
-	 init_tetra_size2, unsigned const max_threads)
+BLP::BLP(const std::vector<double> init_guess, const std::string initguess_f,\
+	 bool igff, const double min_share_, const double contract_tol_, const\
+	 double penalty_param1_, const unsigned penalty_param2_, const double\
+	 init_tetra_size1, const double init_tetra_size2, unsigned const\
+	 max_threads)
 {
   min_share = min_share_;
   contract_tol = contract_tol_;
@@ -32,20 +34,41 @@ BLP::BLP(const std::vector<double> init_guess, const double min_share_, const\
     y.push_back(0.); // init y
   }
   // initialize P's, P[0] at center
-  for (unsigned i = 0; i < params_nbr+1; ++i) {
-    for (unsigned j = 0; j < params_nbr; ++j) {
-      if (i == 0 || j != i) {
-	P[i][j] = init_guess[j];
+  if (!igff) {
+    for (unsigned i = 0; i < params_nbr+1; ++i) {
+      for (unsigned j = 0; j < params_nbr; ++j) {
+        if (i == 0 || j != i) {
+    	P[i][j] = init_guess[j];
+        } else {
+    	if (i < params_nbr-3) {
+    	  P[i][j] = init_guess[j] + init_tetra_size1;
+    	} else {
+    	  P[i][j] = init_guess[j] + init_tetra_size2;
+    	}
+        }	
+      }
+    }
+    P[params_nbr][0] += init_tetra_size1;
+  } else {
+    std::ifstream ifs_ig(initguess_f);
+    std::string aux_line;
+    unsigned i = 0;
+    unsigned j = 0;
+    while (std::getline(ifs_ig, aux_line)) {
+      if (!aux_line.empty()) {
+	P[i][j] = std::stod(aux_line);
       } else {
-	if (i < params_nbr-3) {
-	  P[i][j] = init_guess[j] + init_tetra_size1;
-	} else {
-	  P[i][j] = init_guess[j] + init_tetra_size2;
-	}
-      }	
+	throw std::runtime_error("check init guess file, aborting...");
+      }
+      ++j;
+      if (j == params_nbr) {
+	++i;
+	j = 0;
+      }
     }
   }
-  P[params_nbr][0] += init_tetra_size1;
+
+
   // init parallel params
   unsigned hardware_threads = std::thread::hardware_concurrency();
   num_threads = std::min(hardware_threads != 0 ? hardware_threads : 1,\
@@ -423,8 +446,10 @@ void BLP::persist_ig(const std::string initguess_f)
   std::ofstream fdesc;
   fdesc.open(initguess_f);
   assert(fdesc.is_open());
-  for (unsigned i = 0; i < params_nbr; ++i) {
-    fdesc << P[0][i] << '\n';
+  for (unsigned i = 0; i < params_nbr+1; ++i) {
+    for (unsigned j = 0; j < params_nbr; ++j) {
+      fdesc << P[i][j] << '\n';
+    }
   }
   fdesc.close();
 }

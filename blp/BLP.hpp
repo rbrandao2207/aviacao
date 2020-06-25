@@ -15,10 +15,11 @@ class BLP
 {
 
 public:
-  BLP(const std::vector<double> init_guess, const double min_share_, const\
-      double contract_tol_, const double penalty_param1_, const unsigned\
-      penalty_param2_, const double init_tetra_size1, const double\
-      init_tetra_size2, unsigned const max_threads=16);
+  BLP(const std::vector<double> init_guess, const std::string initguess_f, bool\
+      igff, double min_share_, const double contract_tol_, const double\
+      penalty_param1_, const unsigned penalty_param2_, const double\
+      init_tetra_size1, const double init_tetra_size2, unsigned const\
+      max_threads=64);
 
   template<class Archive>
   void serialize(Archive & ar, const unsigned int version)
