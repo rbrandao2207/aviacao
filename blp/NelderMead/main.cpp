@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cstring>
 #include <fstream>
+#include <limits>
 #include <iostream>
 #include <string>
 #include <thread>
@@ -51,7 +52,7 @@ int main(int argc, char* argv[])
   bool igff = false;
 
   // maximum number of iterations
-  const unsigned max_iter = 1e5;
+  const unsigned max_iter = std::numeric_limits<unsigned>::max();
   
   /// Estimation params:
   // initial guess ((alpha, beta)_r, gamma, lambda, mu)
@@ -63,7 +64,7 @@ int main(int argc, char* argv[])
   // minimum 'observed shares' for numerical feasibility
   const double min_share = {1e-20};
   // BLP contraction tolerance (BJ10 suggests 1e-12)
-  const double contract_tol = {1e-2};
+  const double contract_tol = {1e-4};
   // constrained optimization penalty
   const double penalty_param1 = {1e6};
   const unsigned penalty_param2 = {4}; // (must be even)
@@ -72,9 +73,9 @@ int main(int argc, char* argv[])
   const double init_tetra_size2 = {.05}; // for constrained params (last 3)
   // NM coefficients
   const double NM_tol = {1e-15}; // halt parameter
-  const double alpha = {.5}; // reflection, alpha > 0
+  const double alpha = {5}; // reflection, alpha > 0
   const double beta = {.5}; // contraction, beta in [0,1]
-  const double gamma = {1.5}; // expansion, gamma > 1
+  const double gamma = {15}; // expansion, gamma > 1
   
   /* END OF PARAMETERS */
 
@@ -132,9 +133,9 @@ int main(int argc, char* argv[])
       for (auto& thread : threads) {
         thread.join();
       }
-      // halt check
+      /* halt check
       if (inst_BLP.halt_check(NM_tol, iter_nbr))
-	break;
+        break; */
       // NM procedure
       inst_BLP.nelder_mead(iter_nbr, alpha, beta, gamma, points);
       ++iter_nbr;

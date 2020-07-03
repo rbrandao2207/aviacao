@@ -305,7 +305,7 @@ bool BLP::halt_check(const double NM_tol, unsigned iter_nbr)
     y_std += std::pow(y[i] - y_avg, 2);
   }
   y_std = y_std / (params_nbr+1);
-  // display to cout w/ params
+  /* display to cout w/ params
   std::cout << "y_avg: " << y_avg << " y_std: " << y_std << '\t' <<\
     "# of iterations: " << iter_nbr << " current params: " << '\n';
   for (unsigned i = 0; i < params_nbr+1; ++i) {
@@ -315,11 +315,10 @@ bool BLP::halt_check(const double NM_tol, unsigned iter_nbr)
     }
     std::cout << '\n';
   }
-  std::cout << std::flush;
-  // display to cout simple version
-  /*
+  std::cout << std::flush; */
+  // display to cout std version
   std::cout << "y_avg: " << y_avg << " y_std: " << y_std << '\t' <<\
-    "# of iterations: " << iter_nbr << '\r' << std::flush;*/
+    "# of iterations: " << iter_nbr << '\r' << std::flush;
   // convergence check
   if (y_std < NM_tol && y_avg < std::numeric_limits<double>::max()/2) {
     return true;

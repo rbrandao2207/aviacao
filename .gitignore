@@ -3,6 +3,8 @@
 csvimport/main
 atpi/src/main
 atpi/results/
-blp/main
-blp/results/
+blp/NelderMead/main
+blp/NelderMead/results/
+blp/NewtonRaphson/main
+blp/NewtonRaphson/results/
 dados/
