@@ -44,29 +44,26 @@ int main(int argc, char* argv[])
   const std::string results_dir = "results/";
   const std::string persist_file = results_dir + "arrays/" + run_id;
   const std::string persist_file2 = results_dir + "est_params/" + run_id;
-
+  // initial guess file ((alpha, beta)_r, gamma, lambda, mu)
+  const std::string initguess_f = results_dir + "init_guess";
+  
   // maximum number of iterations
   const unsigned max_iter = std::numeric_limits<unsigned>::max();
   
   /// Estimation params:
-  // initial guess ((alpha, beta)_r, gamma, lambda, mu)
-  std::vector<double> init_guess = {.1, -.1, .1, -.1, .1, .1, .1, .1, .1,\
-					  .1,\
-					  .1, -.1, .1, -.1, .1, .1, .1, .1, .1,\
-					  .1,\
-					  .5, .8, .1};
   // minimum 'observed shares' for numerical feasibility
   const double min_share = {1e-20};
   // BLP contraction tolerance (BJ10 suggests 1e-12)
-  const double contract_tol = {1e-4};
+  const double contract_tol = {1e-12};
   // constrained optimization penalty
   const double penalty_param1 = {1e6};
   const unsigned penalty_param2 = {4}; // (must be even)
 
   // dx for numerical gradient
-  const double inc = std::sqrt(std::numeric_limits<double>::min());
+  //const double inc = std::sqrt(std::numeric_limits<double>::min());
+  const double inc = 1e-4;
 
-  const double step_size = 1e-2;
+  const double step_size = 1e-10;
   const double tol = 1e-4;
   
   /* END OF PARAMETERS */
@@ -87,9 +84,8 @@ int main(int argc, char* argv[])
   } else if ((argc > 1 && std::strcmp(argv[1], "estimation") == 0) ||\
 	     (argc > 2 && std::strcmp(argv[1], "genarrays") == 0 &&\
 	      std::strcmp(argv[2], "estimation") == 0)) {
-
     // instantiate
-    BLP inst_BLP(init_guess, min_share, contract_tol, penalty_param1,\
+    BLP inst_BLP(initguess_f, min_share, contract_tol, penalty_param1,\
 		 penalty_param2);
     
     // deserialize
@@ -128,6 +124,8 @@ int main(int argc, char* argv[])
     }
     // persist results
     inst_BLP.persist(persist_file2);
+    std::remove(initguess_f.c_str());
+    inst_BLP.persist_ig(initguess_f);
     std::cout << "# of iterations: " << iter_nbr << std::endl;
 
   } else {

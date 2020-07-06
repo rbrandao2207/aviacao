@@ -15,7 +15,7 @@ class BLP
 {
 
 public:
-  BLP(const std::vector<double> init_guess, double min_share_, const double\
+  BLP(const std::string initguess_f, double min_share_, const double\
       contract_tol_, const double penalty_param1_, const double penalty_param2_,\
       unsigned const max_threads=64);
 
@@ -36,7 +36,8 @@ public:
   void updatePs(const double inc);
   void step(const double inc, const double step_size, const double tol);
   void persist(const std::string persist_file2);
-
+  void persist_ig(const std::string initguess_f);
+  
 private:
   // Params
   double min_share;

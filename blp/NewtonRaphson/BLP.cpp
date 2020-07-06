@@ -15,7 +15,7 @@
 namespace ublas = boost::numeric::ublas;
 
 
-BLP::BLP(const std::vector<double> init_guess, const double min_share_, const\
+BLP::BLP(const std::string initguess_f, const double min_share_, const\
 	 double contract_tol_, const double penalty_param1_, const double\
 	 penalty_param2_, unsigned const max_threads)
 {
@@ -23,16 +23,30 @@ BLP::BLP(const std::vector<double> init_guess, const double min_share_, const\
   contract_tol = contract_tol_;
   penalty_param1 = penalty_param1_;
   penalty_param2 = penalty_param2_;
-  params_nbr = init_guess.size();
+  // count params
+  params_nbr = 0;
+  std::ifstream ifs_ig(initguess_f);
+  std::string aux_line;
+  while (std::getline(ifs_ig, aux_line)) {
+    ++params_nbr;
+  }
+  // allocate P's and y
   ublas::vector<double> auxP;
   auxP.resize(params_nbr);
-  for (unsigned i = 0; i <= params_nbr+1; ++i) {
-    P.push_back(auxP); // init P0, P1
+  for (unsigned i = 0; i <= params_nbr; ++i) {
+    P.push_back(auxP); // init P0, P1, ...
     y.push_back(0.); // init y
   }
-  // initialize P's, P[0] at center
-  for (unsigned j = 0; j < params_nbr; ++j) {
-    P[0][j] = init_guess[j];
+  // initialize P[0]
+  unsigned i = 0;
+  std::ifstream ifs_ig2(initguess_f);
+  while (std::getline(ifs_ig2, aux_line)) {
+    if (!aux_line.empty()) {
+	P[0][i] = std::stod(aux_line);
+    } else {
+	throw std::runtime_error("check init guess file, aborting...");
+    }
+    ++i;
   }
 
   // init parallel params
@@ -47,7 +61,7 @@ void BLP::allocate()
   // Initialize N, unobs util, and allocate other ublas objs
   N = s_obs_wg.size();
   ublas::vector<double> auxV;
-  for (unsigned i = 0; i <= params_nbr+1; ++i) {
+  for (unsigned i = 0; i <= params_nbr; ++i) {
     xi0.push_back(auxV);
     xi0[i].resize(N);
     std::fill(xi0[i].data().begin(), xi0[i].data().end(), 0.);
@@ -295,4 +309,15 @@ void BLP::persist(const std::string persist_file2)
   fdesc.close();
   std::cout << "Finished params persistance in file " << persist_file2 <<\
     std::endl;
+}
+
+void BLP::persist_ig(const std::string initguess_f)
+{
+  std::ofstream fdesc;
+  fdesc.open(initguess_f);
+  assert(fdesc.is_open());
+  for (unsigned i = 0; i < params_nbr; ++i) {
+      fdesc << P[0][i] << '\n';
+  }
+  fdesc.close();
 }
