@@ -16,8 +16,7 @@ class BLP
 
 public:
   BLP(const std::string initguess_f, double min_share_, const double\
-      contract_tol_, const double penalty_param1_, const double penalty_param2_,\
-      unsigned const max_threads=64);
+      contract_tol_, unsigned const max_threads=64);
 
   template<class Archive>
   void serialize(Archive & ar, const unsigned int version)
@@ -34,7 +33,9 @@ public:
   void allocate();
   void calc_objective(unsigned pt);
   void updatePs(const double inc);
-  void step(const double inc, const double step_size, const double tol);
+  void step(const double inc, const double step_size, const double max_step,\
+	    const double tol, unsigned iter_nbr);
+  void variance();
   void persist(const std::string persist_file2);
   void persist_ig(const std::string initguess_f);
   
@@ -42,8 +43,6 @@ private:
   // Params
   double min_share;
   double contract_tol;
-  double penalty_param1;
-  unsigned penalty_param2;
   // Exogenous vars 
   unsigned N;
   ublas::vector<double> s_obs_wg;

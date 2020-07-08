@@ -16,13 +16,10 @@ namespace ublas = boost::numeric::ublas;
 
 
 BLP::BLP(const std::string initguess_f, const double min_share_, const\
-	 double contract_tol_, const double penalty_param1_, const double\
-	 penalty_param2_, unsigned const max_threads)
+	 double contract_tol_, unsigned const max_threads)
 {
   min_share = min_share_;
   contract_tol = contract_tol_;
-  penalty_param1 = penalty_param1_;
-  penalty_param2 = penalty_param2_;
   // count params
   params_nbr = 0;
   std::ifstream ifs_ig(initguess_f);
@@ -255,23 +252,6 @@ void BLP::calc_objective(unsigned pt)
     					ublas::prod(ublas::trans(xi0[pt]),\
     						    Z), I), 1./N *\
     			    ublas::prod(ublas::trans(Z), xi0[pt]));
-    
-    /* Add penalty for constraints violation (gamma or lambda not in [0,1], or \
-       mu < 0) */
-    double penalty = {0.};
-    if (P[pt][20] < 0.) {
-      penalty += std::pow(1 + P[pt][20], penalty_param2);
-    } else if (P[pt][20] > 1.) {
-      penalty += std::pow(P[pt][20], penalty_param2);
-    } else if (P[pt][21] < 0.) {
-      penalty += std::pow(1 + P[pt][21], penalty_param2);
-    } else if (P[pt][21] > 1.) {
-      penalty += std::pow(P[pt][21], penalty_param2);
-    } else if (P[pt][22] < 0.) {
-      penalty += std::pow(1 + P[pt][22], penalty_param2);
-    }
-    penalty *= penalty_param1;
-    y[pt] += penalty;
     if (std::isnan(y[pt]))
       y[pt] = std::numeric_limits<double>::max();
   }
@@ -286,15 +266,35 @@ void BLP::updatePs(const double inc)
   }
 }
 
-void BLP::step(const double inc, const double step_size, const double tol)
+void BLP::step(const double inc, const double step_size, const double max_step,\
+	       const double tol, unsigned iter_nbr)
 {
   halt_check = true;
   for (unsigned i = 0; i < params_nbr; ++i) {
     grad[i] = (y[i+1] - y[0]) / inc;
     if (halt_check == true && grad[i] > tol)
       halt_check = false;
-    P[0][i] += grad[i] * step_size;
+    double step = - grad[i] * step_size;
+    if (step < -max_step) {
+      P[0][i] -= max_step;
+    } else if (step > max_step) {
+      P[0][i] += max_step;
+    } else {
+      P[0][i] += step;
+    }
+    // Add params constraints (gamma and lambda in [0,1], mu < 0)
+    if (i >= 20 && P[0][i] < 0.)
+      P[0][i] = 0.;
+    if ((i == 20 || i == 21) && P[0][i] > 1.)
+      P[0][i] = 1.;
   }
+  std::cout << "y value: " << y[0] << '\t' << "# of iterations: " << iter_nbr\
+	    << '\r' << std::flush;
+}
+
+void BLP::variance()
+{
+  // TODO
 }
 
 void BLP::persist(const std::string persist_file2)

@@ -48,23 +48,22 @@ int main(int argc, char* argv[])
   const std::string initguess_f = results_dir + "init_guess";
   
   // maximum number of iterations
-  const unsigned max_iter = std::numeric_limits<unsigned>::max();
+  const unsigned max_iter = 1e4;
   
   /// Estimation params:
   // minimum 'observed shares' for numerical feasibility
   const double min_share = {1e-20};
   // BLP contraction tolerance (BJ10 suggests 1e-12)
-  const double contract_tol = {1e-12};
-  // constrained optimization penalty
-  const double penalty_param1 = {1e6};
-  const unsigned penalty_param2 = {4}; // (must be even)
+  const double contract_tol = {1e-4};
 
   // dx for numerical gradient
   //const double inc = std::sqrt(std::numeric_limits<double>::min());
   const double inc = 1e-4;
 
+  // Newton Raphson params
   const double step_size = 1e-10;
-  const double tol = 1e-4;
+  const double max_step = 1e-1;
+  const double tol = 1e-8;
   
   /* END OF PARAMETERS */
 
@@ -85,8 +84,7 @@ int main(int argc, char* argv[])
 	     (argc > 2 && std::strcmp(argv[1], "genarrays") == 0 &&\
 	      std::strcmp(argv[2], "estimation") == 0)) {
     // instantiate
-    BLP inst_BLP(initguess_f, min_share, contract_tol, penalty_param1,\
-		 penalty_param2);
+    BLP inst_BLP(initguess_f, min_share, contract_tol);
     
     // deserialize
     {
@@ -114,14 +112,15 @@ int main(int argc, char* argv[])
       for (auto& thread : threads) {
         thread.join();
       }
-      inst_BLP.step(inc, step_size, tol);
-      //if (inst_BLP.halt_check(NM_tol, iter_nbr))
+      inst_BLP.step(inc, step_size, max_step, tol, iter_nbr);
       if (inst_BLP.halt_check) 
         break;
       ++iter_nbr;
       if (iter_nbr == max_iter)
 	break;
     }
+    // compute variance
+    inst_BLP.variance();
     // persist results
     inst_BLP.persist(persist_file2);
     std::remove(initguess_f.c_str());
