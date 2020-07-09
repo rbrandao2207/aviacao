@@ -16,10 +16,12 @@ namespace ublas = boost::numeric::ublas;
 
 
 BLP::BLP(const std::string initguess_f, const double min_share_, const\
-	 double contract_tol_, unsigned const max_threads)
+	 double contract_tol_, const unsigned max_iter_contract_, unsigned\
+	 const max_threads)
 {
   min_share = min_share_;
   contract_tol = contract_tol_;
+  max_iter_contract = max_iter_contract_;
   // count params
   params_nbr = 0;
   std::ifstream ifs_ig(initguess_f);
@@ -110,21 +112,59 @@ void BLP::calc_objective(unsigned pt)
   for (auto& thread : threads) {
     thread.join();
   }
-  
-  /// Berry's Contraction 
-  bool conv_check = 0;
-  while (!conv_check) {
 
-    auto xi1_L = [&] (unsigned begin, unsigned end) {
+  // other lambda (_L) functions for use in while loop below
+  auto xi1_L = [&] (unsigned begin, unsigned end) {
+		 for (unsigned i = begin; i < end; ++i) {
+		   xi1[pt][i] = xi0[pt][i] + P[pt][21] *\
+		     (ln_s_obs[pt][i] -	std::log(s_calc[pt][i]));
+		   if (std::isnan(xi1[pt][i])) {
+		     xi_nan = true;
+		     break;
+		   }
+		 }
+	       };
+
+  auto s_aux_L = [&] (unsigned begin, unsigned end) {
 		   for (unsigned i = begin; i < end; ++i) {
-		     xi1[pt][i] = xi0[pt][i] + P[pt][21] * (ln_s_obs[pt][i] -\
-					     std::log(s_calc[pt][i]));
-		     if (std::isnan(xi1[pt][i])) {
-		       xi_nan = true;
-		       break;
-		     }
+		     s_aux1[pt][i] = std::exp((X(i, 0) * P[pt][0] + X(i, 1) *\
+					       P[pt][1] + X(i, 2) * P[pt][2] +\
+					       X(i, 3) * P[pt][3] + X(i, 4) *\
+					       P[pt][4] + X(i, 5) * P[pt][5] +\
+					       X(i, 6) * P[pt][6] + X(i, 7) *\
+					       P[pt][7] + X(i, 8) * P[pt][8] +\
+					       X(i, 9) * P[pt][9] +\
+					       xi1[pt][i]) / P[pt][21]);
+		     s_aux2[pt][i] = std::exp((X(i, 0) * P[pt][10] + X(i, 1) *\
+					       P[pt][11] + X(i, 2) * P[pt][12]\
+					       + X(i, 3) * P[pt][13] + X(i, 4)\
+					       * P[pt][14] + X(i, 5) *\
+					       P[pt][15] + X(i, 6) *\
+					       P[pt][16] + X(i, 7) * P[pt][17]\
+					       + X(i, 8) * P[pt][18] + X(i, 9)\
+					       * P[pt][19] + xi1[pt][i]) /\
+					      P[pt][21]);
 		   }
 		 };
+
+  auto s_calc_L = [&] (unsigned begin, unsigned end) {
+		    for (unsigned i = begin; i < end; ++i) {
+		      s_calc[pt][i] = P[pt][20] * ((s_aux1[pt][i] / D1[pt][i]) *\
+						   (std::pow(D1[pt][i],\
+							     P[pt][21]) / \
+						    (1 + std::pow(D1[pt][i],\
+								  P[pt][21]))))\
+			+ (1 - P[pt][20]) * ((s_aux2[pt][i] / D2[pt][i]) *\
+					     (std::pow(D2[pt][i], P[pt][21]) /\
+					      (1 + std::pow(D2[pt][i],\
+							    P[pt][21]))));
+		    }
+		  };
+
+  /// Berry's Contraction 
+  bool conv_check = 0;
+  unsigned iter_contract = 0;
+  while (!conv_check) {
     threads.clear();
     j = 0;
     for (unsigned i = 0; i < (num_threads - 1); ++i) {
@@ -140,7 +180,7 @@ void BLP::calc_objective(unsigned pt)
     if (xi_nan)
       break;
     for (unsigned i = 0; i <= N; ++i) {
-      if (i == N) {
+      if (i == N || iter_contract == max_iter_contract) {
         conv_check = 1;
         break;
       }
@@ -153,27 +193,6 @@ void BLP::calc_objective(unsigned pt)
     /// calc shares
     // calc s_ind1 & s_ind2 (exp(Xbeta....))
     // check header file for params mapping to P
-    auto s_aux_L = [&] (unsigned begin, unsigned end) {
-		     for (unsigned i = begin; i < end; ++i) {
-		       s_aux1[pt][i] = std::exp((X(i, 0) * P[pt][0] + X(i, 1) *\
-						 P[pt][1] + X(i, 2) * P[pt][2] +\
-						 X(i, 3) * P[pt][3] + X(i, 4) *\
-						 P[pt][4] + X(i, 5) * P[pt][5] +\
-						 X(i, 6) * P[pt][6] + X(i, 7) *\
-						 P[pt][7] + X(i, 8) * P[pt][8] +\
-						 X(i, 9) * P[pt][9] +\
-						 xi1[pt][i]) / P[pt][21]);
-		       s_aux2[pt][i] = std::exp((X(i, 0) * P[pt][10] + X(i, 1) *\
-						 P[pt][11] + X(i, 2) * P[pt][12]\
-						 + X(i, 3) * P[pt][13] + X(i, 4)\
-						 * P[pt][14] + X(i, 5) *\
-						 P[pt][15] + X(i, 6) *\
-						 P[pt][16] + X(i, 7) * P[pt][17]\
-						 + X(i, 8) * P[pt][18] + X(i, 9)\
-						 * P[pt][19] + xi1[pt][i]) /\
-						P[pt][21]);
-		     }
-		   };
     threads.clear();
     j = 0;
     for (unsigned i = 0; i < (num_threads - 1); ++i) {
@@ -213,20 +232,6 @@ void BLP::calc_objective(unsigned pt)
     }
   
     // compute model shares
-    auto s_calc_L = [&] (unsigned begin, unsigned end) {
-		      for (unsigned i = begin; i < end; ++i) {
-			s_calc[pt][i] = P[pt][20] * ((s_aux1[pt][i] / D1[pt][i])\
-						     * (std::pow(D1[pt][i],\
-								 P[pt][21]) /\
-							(1 +\
-							 std::pow(D1[pt][i],\
-								  P[pt][21]))))\
-			  + (1 - P[pt][20]) * ((s_aux2[pt][i] / D2[pt][i]) *\
-					       (std::pow(D2[pt][i], P[pt][21]) /\
-						(1 + std::pow(D2[pt][i],\
-							      P[pt][21]))));
-		      }
-		    };
     threads.clear();
     j = 0;
     for (unsigned i = 0; i < (num_threads - 1); ++i) {
@@ -240,6 +245,7 @@ void BLP::calc_objective(unsigned pt)
     }
     // Update unobs util
     xi0[pt] = xi1[pt];
+    ++iter_contract;
   }
 
   /// Compute objective function

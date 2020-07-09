@@ -16,7 +16,8 @@ class BLP
 
 public:
   BLP(const std::string initguess_f, double min_share_, const double\
-      contract_tol_, unsigned const max_threads=64);
+      contract_tol_, const unsigned max_iter_contract_, unsigned const\
+      max_threads=64);
 
   template<class Archive>
   void serialize(Archive & ar, const unsigned int version)
@@ -43,6 +44,7 @@ private:
   // Params
   double min_share;
   double contract_tol;
+  unsigned max_iter_contract;
   // Exogenous vars 
   unsigned N;
   ublas::vector<double> s_obs_wg;

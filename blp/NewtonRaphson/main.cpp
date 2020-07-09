@@ -38,7 +38,7 @@ int main(int argc, char* argv[])
 				      900, 1e3, 1.25e3, 1.5e3, 1.75e3, 2e3, 3e3,\
 				      5e5};
   // population threshold
-  const unsigned pop_thres = 5e5;
+  const unsigned pop_thres = {500000};
 
   // results directory
   const std::string results_dir = "results/";
@@ -48,22 +48,23 @@ int main(int argc, char* argv[])
   const std::string initguess_f = results_dir + "init_guess";
   
   // maximum number of iterations
-  const unsigned max_iter = 1e4;
+  const unsigned max_iter = {300};
   
   /// Estimation params:
   // minimum 'observed shares' for numerical feasibility
   const double min_share = {1e-20};
   // BLP contraction tolerance (BJ10 suggests 1e-12)
-  const double contract_tol = {1e-4};
+  const double contract_tol = {1e-6};
+  const unsigned max_iter_contract = {1000};
 
   // dx for numerical gradient
   //const double inc = std::sqrt(std::numeric_limits<double>::min());
-  const double inc = 1e-4;
+  const double inc = {1e-4};
 
   // Newton Raphson params
-  const double step_size = 1e-10;
-  const double max_step = 1e-1;
-  const double tol = 1e-8;
+  const double step_size = {1e-10};
+  const double max_step = {1e-1};
+  const double tol = {1e-8};
   
   /* END OF PARAMETERS */
 
@@ -84,7 +85,7 @@ int main(int argc, char* argv[])
 	     (argc > 2 && std::strcmp(argv[1], "genarrays") == 0 &&\
 	      std::strcmp(argv[2], "estimation") == 0)) {
     // instantiate
-    BLP inst_BLP(initguess_f, min_share, contract_tol);
+    BLP inst_BLP(initguess_f, min_share, contract_tol, max_iter_contract);
     
     // deserialize
     {
@@ -115,9 +116,9 @@ int main(int argc, char* argv[])
       inst_BLP.step(inc, step_size, max_step, tol, iter_nbr);
       if (inst_BLP.halt_check) 
         break;
-      ++iter_nbr;
       if (iter_nbr == max_iter)
 	break;
+      ++iter_nbr;
     }
     // compute variance
     inst_BLP.variance();
