@@ -48,13 +48,13 @@ int main(int argc, char* argv[])
   const std::string initguess_f = results_dir + "init_guess";
   
   // maximum number of iterations
-  const unsigned max_iter = {300};
+  const unsigned max_iter = {1000};
   
   /// Estimation params:
   // minimum 'observed shares' for numerical feasibility
   const double min_share = {1e-20};
   // BLP contraction tolerance (BJ10 suggests 1e-12)
-  const double contract_tol = {1e-6};
+  const double contract_tol = {1e-12};
   const unsigned max_iter_contract = {1000};
 
   // dx for numerical gradient
@@ -64,6 +64,7 @@ int main(int argc, char* argv[])
   // Newton Raphson params
   const double step_size = {1e-10};
   const double max_step = {1e-1};
+  const double step_factor = {10};
   const double tol = {1e-8};
   
   /* END OF PARAMETERS */
@@ -106,26 +107,27 @@ int main(int argc, char* argv[])
     while (true) {
       inst_BLP.updatePs(inc);
       std::vector<std::thread> threads = {};
-      for (auto& pt : points) {
+      for (unsigned pt = 1; pt < points.size(); ++pt) {
         threads.push_back(std::thread(&BLP::calc_objective, std::ref(inst_BLP),\
 				      pt));
       }
       for (auto& thread : threads) {
         thread.join();
       }
-      inst_BLP.step(inc, step_size, max_step, tol, iter_nbr);
+      inst_BLP.grad_calc(inc, tol);
       if (inst_BLP.halt_check) 
         break;
+      inst_BLP.step(step_size, max_step, step_factor, iter_nbr);
       if (iter_nbr == max_iter)
 	break;
       ++iter_nbr;
+      std::remove(initguess_f.c_str());
+      inst_BLP.persist_ig(initguess_f);
     }
     // compute variance
     inst_BLP.variance();
     // persist results
     inst_BLP.persist(persist_file2);
-    std::remove(initguess_f.c_str());
-    inst_BLP.persist_ig(initguess_f);
     std::cout << "# of iterations: " << iter_nbr << std::endl;
 
   } else {

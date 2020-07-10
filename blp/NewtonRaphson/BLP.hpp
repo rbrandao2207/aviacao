@@ -34,8 +34,9 @@ public:
   void allocate();
   void calc_objective(unsigned pt);
   void updatePs(const double inc);
-  void step(const double inc, const double step_size, const double max_step,\
-	    const double tol, unsigned iter_nbr);
+  void grad_calc(const double inc, const double tol);
+  void step(const double step_size, const double max_step, const double\
+	    step_factor, unsigned iter_nbr);
   void variance();
   void persist(const std::string persist_file2);
   void persist_ig(const std::string initguess_f);

@@ -47,7 +47,6 @@ BLP::BLP(const std::string initguess_f, const double min_share_, const\
     }
     ++i;
   }
-
   // init parallel params
   unsigned hardware_threads = std::thread::hardware_concurrency();
   num_threads = std::min(hardware_threads != 0 ? hardware_threads : 1,\
@@ -81,6 +80,8 @@ void BLP::allocate()
     ln_s_obs.push_back(auxV);
     ln_s_obs[i].resize(N);
   }
+  // calc initial y0
+  this->calc_objective(0);
 }
 
 void BLP::calc_objective(unsigned pt)
@@ -272,27 +273,66 @@ void BLP::updatePs(const double inc)
   }
 }
 
-void BLP::step(const double inc, const double step_size, const double max_step,\
-	       const double tol, unsigned iter_nbr)
+void BLP::grad_calc(const double inc, const double tol)
 {
   halt_check = true;
   for (unsigned i = 0; i < params_nbr; ++i) {
     grad[i] = (y[i+1] - y[0]) / inc;
     if (halt_check == true && grad[i] > tol)
       halt_check = false;
-    double step = - grad[i] * step_size;
-    if (step < -max_step) {
-      P[0][i] -= max_step;
-    } else if (step > max_step) {
-      P[0][i] += max_step;
-    } else {
-      P[0][i] += step;
+  }
+}
+
+void BLP::step(const double step_size, const double max_step, const double\
+	       step_factor, unsigned iter_nbr)
+{
+  ublas::vector<double> P_aux = P[0];
+  double y_aux = y[0];
+  std::vector<double> step;
+  auto step_P0 = [&] (unsigned i) {
+		   if (step[i] < -max_step) {
+		     P[0][i] -= max_step;
+		   } else if (step[i] > max_step) {
+		     P[0][i] += max_step;
+		   } else {
+		     P[0][i] += step[i];
+		   }
+		   // constraints (gamma and lambda in [0,1], mu < 0)
+		   if (i >= 20 && P[0][i] < 0.)
+		     P[0][i] = 0.;
+		   if ((i == 20 || i == 21) && P[0][i] > 1.)
+		     P[0][i] = 1.;
+		 };
+		    
+  for (unsigned i = 0; i < params_nbr; ++i) {
+    step.push_back(- grad[i] * step_size);
+    step_P0(i);
+  }
+  this->calc_objective(0);
+  if (y[0] < y_aux) {
+    while (y[0] < y_aux) {
+      y_aux = y[0];
+      P_aux = P[0];
+      for (unsigned i = 0; i < params_nbr; ++i) {
+	step[i] *= step_factor;
+	step_P0(i);
+      }
+      this->calc_objective(0);
+      std::cout << "y value (increasing step size): " << y[0] << '\t' << \
+	"# of iterations: " << iter_nbr << '\r' << std::flush;
     }
-    // Add params constraints (gamma and lambda in [0,1], mu < 0)
-    if (i >= 20 && P[0][i] < 0.)
-      P[0][i] = 0.;
-    if ((i == 20 || i == 21) && P[0][i] > 1.)
-      P[0][i] = 1.;
+    y[0] = y_aux;
+    P[0] = P_aux;
+  } else if (y[0] >= y_aux) {
+    while (y[0] > y_aux) {
+      for (unsigned i = 0; i < params_nbr; ++i) {
+	step[i] /= step_factor;
+	step_P0(i);
+      }
+      this->calc_objective(0);
+      std::cout << "y value (diminishing step size): " << y[0] << '\t' << \
+	"# of iterations: " << iter_nbr << '\r' << std::flush;
+    }
   }
   std::cout << "y value: " << y[0] << '\t' << "# of iterations: " << iter_nbr\
 	    << '\r' << std::flush;
