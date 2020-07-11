@@ -88,7 +88,6 @@ void BLP::calc_objective(unsigned pt)
 {
   // initialization
   std::fill(xi0[pt].data().begin(), xi0[pt].data().end(), 0.);
-  bool xi_nan = false;
   std::vector<std::thread> threads;
   unsigned j, k, block_size;
   block_size = N / num_threads;
@@ -113,19 +112,17 @@ void BLP::calc_objective(unsigned pt)
   for (auto& thread : threads) {
     thread.join();
   }
-
   // other lambda (_L) functions for use in while loop below
   auto xi1_L = [&] (unsigned begin, unsigned end) {
 		 for (unsigned i = begin; i < end; ++i) {
 		   xi1[pt][i] = xi0[pt][i] + P[pt][21] *\
 		     (ln_s_obs[pt][i] -	std::log(s_calc[pt][i]));
 		   if (std::isnan(xi1[pt][i])) {
-		     xi_nan = true;
+		     xi1[pt][i] = xi0[pt][i];
 		     break;
 		   }
 		 }
 	       };
-
   auto s_aux_L = [&] (unsigned begin, unsigned end) {
 		   for (unsigned i = begin; i < end; ++i) {
 		     s_aux1[pt][i] = std::exp((X(i, 0) * P[pt][0] + X(i, 1) *\
@@ -147,7 +144,6 @@ void BLP::calc_objective(unsigned pt)
 					      P[pt][21]);
 		   }
 		 };
-
   auto s_calc_L = [&] (unsigned begin, unsigned end) {
 		    for (unsigned i = begin; i < end; ++i) {
 		      s_calc[pt][i] = P[pt][20] * ((s_aux1[pt][i] / D1[pt][i]) *\
@@ -161,7 +157,6 @@ void BLP::calc_objective(unsigned pt)
 							    P[pt][21]))));
 		    }
 		  };
-
   /// Berry's Contraction 
   bool conv_check = 0;
   unsigned iter_contract = 0;
@@ -178,8 +173,6 @@ void BLP::calc_objective(unsigned pt)
       thread.join();
     }
     // check for convergence
-    if (xi_nan)
-      break;
     for (unsigned i = 0; i <= N; ++i) {
       if (i == N || iter_contract == max_iter_contract) {
         conv_check = 1;
@@ -231,7 +224,6 @@ void BLP::calc_objective(unsigned pt)
         }
       }
     }
-  
     // compute model shares
     threads.clear();
     j = 0;
@@ -248,20 +240,14 @@ void BLP::calc_objective(unsigned pt)
     xi0[pt] = xi1[pt];
     ++iter_contract;
   }
-
-  /// Compute objective function
-  if (xi_nan) {
+  /// Compute objective function: y = (1/N xi'Z)I(1/N Z'xi)
+  ublas::identity_matrix<double> I (Z.size2());
+  y[pt] = ublas::inner_prod(ublas::prod(1./N *\
+					ublas::prod(ublas::trans(xi0[pt]), Z),\
+					I), 1./N * ublas::prod(ublas::trans(Z),\
+							       xi0[pt]));
+  if (std::isnan(y[pt]))
     y[pt] = std::numeric_limits<double>::max();
-  } else {
-    // y = (1/N xi'Z)I(1/N Z'xi)
-    ublas::identity_matrix<double> I (Z.size2());
-    y[pt] = ublas::inner_prod(ublas::prod(1./N *\
-    					ublas::prod(ublas::trans(xi0[pt]),\
-    						    Z), I), 1./N *\
-    			    ublas::prod(ublas::trans(Z), xi0[pt]));
-    if (std::isnan(y[pt]))
-      y[pt] = std::numeric_limits<double>::max();
-  }
 }
 
 void BLP::updatePs(const double inc)
@@ -325,12 +311,13 @@ void BLP::step(const double step_size, const double max_step, const double\
     P[0] = P_aux;
   } else if (y[0] >= y_aux) {
     while (y[0] > y_aux) {
+      P[0] = P_aux;
       for (unsigned i = 0; i < params_nbr; ++i) {
 	step[i] /= step_factor;
 	step_P0(i);
       }
       this->calc_objective(0);
-      std::cout << "y value (diminishing step size): " << y[0] << '\t' << \
+      std::cout << "y value (diminishing step size): " << y_aux << '\t' << \
 	"# of iterations: " << iter_nbr << '\r' << std::flush;
     }
   }
