@@ -109,9 +109,10 @@ int main(int argc, char* argv[])
 
     // GMM
     unsigned iter_nbr = 0;
+    std::vector<std::thread> threads = {};
     while (true) {
       inst_BLP.updatePs(inc);
-      std::vector<std::thread> threads = {};
+      threads.clear();
       for (unsigned pt = 1; pt <= inst_BLP.params_nbr; ++pt) {
         threads.push_back(std::thread(&BLP::calc_objective, std::ref(inst_BLP),\
 				      pt, false));
@@ -125,9 +126,13 @@ int main(int argc, char* argv[])
       inst_BLP.step(step_size, max_step, step_factor, iter_nbr);
       if (inst_BLP.do_NelderMead) {
 	inst_BLP.updatePs_NM();
+	threads.clear();
 	for (unsigned pt = 1; pt <= inst_BLP.params_nbr; ++pt) {
 	  threads.push_back(std::thread(&BLP::calc_objective,\
 					std::ref(inst_BLP), pt, true));
+	}
+	for (auto& thread : threads) {
+	  thread.join();
 	}
 	inst_BLP.nelder_mead(alpha, beta, gamma);
 	inst_BLP.updateP0_NM(iter_nbr);

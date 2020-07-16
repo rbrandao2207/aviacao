@@ -328,7 +328,9 @@ void BLP::step(const double step_size, const double max_step, const double\
     do_NelderMead = false;
     while (y[0] < y_aux) {
       y_aux = y[0];
-      P_aux = P[0];
+      P[params_nbr] = P[0]; // save current best in aux var
+      P[0] = P_aux; // revert P0 to increase step below
+      P_aux = P[params_nbr];
       for (unsigned i = 0; i < params_nbr; ++i) {
 	step[i] *= step_factor;
 	step_P0(i);
@@ -340,6 +342,8 @@ void BLP::step(const double step_size, const double max_step, const double\
     y[0] = y_aux;
     P[0] = P_aux;
   } else if (y[0] >= y_aux) {
+    y[0] = y_aux;
+    P[0] = P_aux;
     do_NelderMead = true;
   }
 }
