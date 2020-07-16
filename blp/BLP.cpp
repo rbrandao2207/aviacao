@@ -66,7 +66,7 @@ void BLP::allocate()
   // Initialize N, unobs util, and allocate other ublas objs
   N = s_obs_wg.size();
   ublas::vector<double> auxV;
-  for (unsigned i = 0; i <= params_nbr; ++i) {
+  for (unsigned i = 0; i <= params_nbr+3; ++i) {
     xi0.push_back(auxV);
     xi0[i].resize(N);
     std::fill(xi0[i].data().begin(), xi0[i].data().end(), 0.);
@@ -322,8 +322,13 @@ void BLP::step(const double step_size, const double max_step, const double\
     step_P0(i);
   }
   this->calc_objective(0);
-  std::cout << "y value: " << y[0] << '\t' << "# of iterations: " << iter_nbr\
-	    << '\r' << std::flush;
+  if (y[0] < y_aux) {
+    std::cout << "y value (increasing step size): " << y[0] << '\t' <<\
+      "# of iterations: " << iter_nbr << '\r' << std::flush;
+  } else {
+    std::cout << "NR step failed (moving to NM), current y value: " << y_aux <<\
+      '\t' << "# of iterations: " << iter_nbr << '\r' << std::flush;
+  }
   if (y[0] < y_aux) {
     do_NelderMead = false;
     while (y[0] < y_aux) {
@@ -336,8 +341,13 @@ void BLP::step(const double step_size, const double max_step, const double\
 	step_P0(i);
       }
       this->calc_objective(0);
-      std::cout << "y value (increased step size): " << y[0] << '\t' << \
-	"# of iterations: " << iter_nbr << '\r' << std::flush;
+      if (y[0] < y_aux) {
+	std::cout << "y value (increased step size): " << y[0] << '\t' <<\
+	  "# of iterations: " << iter_nbr << '\r' << std::flush;
+      } else {
+	std::cout << "NR step increase failed, current y value: " << y_aux <<\
+	  '\t' << "# of iterations: " << iter_nbr << '\r' << std::flush;
+      }
     }
     y[0] = y_aux;
     P[0] = P_aux;
@@ -468,8 +478,8 @@ void BLP::updateP0_NM(unsigned iter_nbr)
   for (unsigned i = 0; i <= params_nbr; ++i) {
     P[params_nbr+1] += P[i];
   }
-  P[params_nbr+1] /= params_nbr;
-  P[0] = P[params_nbr];
+  P[params_nbr+1] /= (params_nbr+1);
+  P[0] = P[params_nbr+1];
   std::cout << "Nelder Mead procedure finished at iter " << iter_nbr << '\r' <<\
     std::flush;
 }

@@ -106,7 +106,6 @@ int main(int argc, char* argv[])
 	ifs.close();
     }
     inst_BLP.allocate();
-
     // GMM
     unsigned iter_nbr = 0;
     std::vector<std::thread> threads = {};
