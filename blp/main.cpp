@@ -48,14 +48,16 @@ int main(int argc, char* argv[])
   const std::string initguess_f = results_dir + "init_guess";
   
   // maximum number of iterations
-  const unsigned max_iter = {1000};
+  const unsigned max_iter = {1000000};
   
   //// Estimation params
   // minimum 'observed shares' for numerical feasibility
   const double min_share = {1e-20};
-  // BLP contraction tolerance (BJ10 suggests 1e-12)
+  /// BLP contraction
+  // tolerance (BJ10 suggests 1e-12)
   const double contract_tol = {1e-12};
-  const unsigned max_iter_contract = {1000};
+  // maximum number of iterations
+  const unsigned max_iter_contract = {100};
   /// Newton Raphson params
   const double inc = {1e-4}; // dx for numerical gradient
   const double step_size = {1e-10};
@@ -123,6 +125,7 @@ int main(int argc, char* argv[])
       if (inst_BLP.halt_check) 
         break;
       inst_BLP.step(step_size, max_step, step_factor, iter_nbr);
+      /*
       if (inst_BLP.do_NelderMead) {
 	inst_BLP.updatePs_NM();
 	threads.clear();
@@ -135,7 +138,7 @@ int main(int argc, char* argv[])
 	}
 	inst_BLP.nelder_mead(alpha, beta, gamma);
 	inst_BLP.updateP0_NM(iter_nbr);
-      }
+      }*/
       if (iter_nbr == max_iter)
 	break;
       ++iter_nbr;

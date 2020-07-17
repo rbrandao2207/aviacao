@@ -322,6 +322,9 @@ void BLP::step(const double step_size, const double max_step, const double\
     step_P0(i);
   }
   this->calc_objective(0);
+  std::cout << "y value: " << y[0] << '\t' << "# of iterations: " << iter_nbr <<\
+    '\r' << std::flush;
+  /* step adjustment eliminated below
   if (y[0] < y_aux) {
     std::cout << "y value (increasing step size): " << y[0] << '\t' <<\
       "# of iterations: " << iter_nbr << '\r' << std::flush;
@@ -329,6 +332,7 @@ void BLP::step(const double step_size, const double max_step, const double\
     std::cout << "NR step failed (moving to NM), current y value: " << y_aux <<\
       '\t' << "# of iterations: " << iter_nbr << '\r' << std::flush;
   }
+
   if (y[0] < y_aux) {
     do_NelderMead = false;
     while (y[0] < y_aux) {
@@ -355,7 +359,7 @@ void BLP::step(const double step_size, const double max_step, const double\
     y[0] = y_aux;
     P[0] = P_aux;
     do_NelderMead = true;
-  }
+  } */
 }
 
 void BLP::updatePs_NM()
